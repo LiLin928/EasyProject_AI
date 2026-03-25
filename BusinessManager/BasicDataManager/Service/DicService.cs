@@ -36,7 +36,7 @@ namespace BusinessManager.BasicDataManager.Service
             return dic?.Adapt<BaseDicRes>();
         }
 
-        public async Task<long> CreateAsync(BaseDicReq req)
+        public async Task<string> CreateAsync(BaseDicReq req)
         {
             var entity = req.Adapt<BaseDic>();
             entity.CreateTime = DateTime.Now;

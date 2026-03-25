@@ -53,9 +53,9 @@ namespace BusinessManager.Business.SrmManager.Service
             return PageResponse<SrmPurchaseOrderRes>.Create(resList, list.Count, pageIndex, pageSize);
         }
 
-        public async Task<SrmPurchaseOrderRes> GetByIdAsync(long id)
+        public async Task<SrmPurchaseOrderRes> GetByIdAsync(string id)
         {
-            var order = await _db.Queryable<SrmPurchaseOrder>().Where(o => o.Id == id.ToString()).FirstAsync();
+            var order = await _db.Queryable<SrmPurchaseOrder>().Where(o => o.Id == id).FirstAsync();
             if (order == null) return null;
 
             var items = await _db.Queryable<SrmPurchaseOrderItem>()
@@ -82,7 +82,7 @@ namespace BusinessManager.Business.SrmManager.Service
             };
         }
 
-        public async Task<long> CreateAsync(long userId, SrmPurchaseOrderReq req)
+        public async Task<string> CreateAsync(string userId, SrmPurchaseOrderReq req)
         {
             _db.Ado.BeginTran();
             try
@@ -148,13 +148,13 @@ namespace BusinessManager.Business.SrmManager.Service
             return await _db.Updateable(order).ExecuteCommandHasChangeAsync();
         }
 
-        public async Task<bool> DeleteAsync(long id)
+        public async Task<bool> DeleteAsync(string id)
         {
             _db.Ado.BeginTran();
             try
             {
-                await _db.Deleteable<SrmPurchaseOrderItem>().Where(i => i.OrderId == id.ToString()).ExecuteCommandAsync();
-                var result = await _db.Deleteable<SrmPurchaseOrder>().Where(o => o.Id == id.ToString()).ExecuteCommandHasChangeAsync();
+                await _db.Deleteable<SrmPurchaseOrderItem>().Where(i => i.OrderId == id).ExecuteCommandAsync();
+                var result = await _db.Deleteable<SrmPurchaseOrder>().Where(o => o.Id == id).ExecuteCommandHasChangeAsync();
                 _db.Ado.CommitTran();
                 return result;
             }
@@ -165,17 +165,17 @@ namespace BusinessManager.Business.SrmManager.Service
             }
         }
 
-        public async Task<bool> ConfirmAsync(long id)
+        public async Task<bool> ConfirmAsync(string id)
         {
-            var order = await _db.Queryable<SrmPurchaseOrder>().Where(o => o.Id == id.ToString()).FirstAsync();
+            var order = await _db.Queryable<SrmPurchaseOrder>().Where(o => o.Id == id).FirstAsync();
             if (order == null) return false;
             order.Status = 2;
             return await _db.Updateable(order).ExecuteCommandHasChangeAsync();
         }
 
-        public async Task<bool> ReceiveAsync(long id)
+        public async Task<bool> ReceiveAsync(string id)
         {
-            var order = await _db.Queryable<SrmPurchaseOrder>().Where(o => o.Id == id.ToString()).FirstAsync();
+            var order = await _db.Queryable<SrmPurchaseOrder>().Where(o => o.Id == id).FirstAsync();
             if (order == null) return false;
             order.Status = 4;
             order.ReceiveDate = DateTime.Now;

@@ -66,7 +66,7 @@ namespace BusinessManager.FlowerMallManager.Service
                 .ExecuteCommandHasChangeAsync();
         }
 
-        public async Task<bool> DeleteAsync(long userId, long id)
+        public async Task<bool> DeleteAsync(string userId, string id)
         {
             return await _db.Deleteable<MallAddress>()
                 .Where(a => a.Id == id && a.UserId == userId)

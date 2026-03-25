@@ -37,7 +37,7 @@ namespace BusinessManager.BasicDataManager.Service
             return user?.Adapt<BaseUsersRes>();
         }
 
-        public async Task<long> CreateAsync(BaseUsersReq req)
+        public async Task<string> CreateAsync(BaseUsersReq req)
         {
             var entity = req.Adapt<BaseUsers>();
             entity.Password = SecurityHelper.HashMD5(req.Password);

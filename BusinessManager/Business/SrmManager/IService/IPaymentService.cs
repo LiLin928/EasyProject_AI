@@ -8,9 +8,9 @@ namespace BusinessManager.Business.SrmManager.IService
     public interface IPaymentService
     {
         Task<PageResponse<SrmPaymentRequestRes>> GetPageDataAsync(int pageIndex, int pageSize, int? status = null, string keyword = null);
-        Task<SrmPaymentRequestRes> GetByIdAsync(long id);
-        Task<long> CreateAsync(long userId, SrmPaymentRequestReq req);
-        Task<bool> ApproveAsync(long id, bool approved);
-        Task<bool> PayAsync(long id);
+        Task<SrmPaymentRequestRes> GetByIdAsync(string id);
+        Task<string> CreateAsync(string userId, SrmPaymentRequestReq req);
+        Task<bool> ApproveAsync(string id, bool approved);
+        Task<bool> PayAsync(string id);
     }
 }

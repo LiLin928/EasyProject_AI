@@ -52,9 +52,9 @@ namespace BusinessManager.Business.SrmManager.Service
             return PageResponse<SrmPurchaseRequestRes>.Create(resList, list.Count, pageIndex, pageSize);
         }
 
-        public async Task<SrmPurchaseRequestRes> GetByIdAsync(long id)
+        public async Task<SrmPurchaseRequestRes> GetByIdAsync(string id)
         {
-            var request = await _db.Queryable<SrmPurchaseRequest>().Where(r => r.Id == id.ToString()).FirstAsync();
+            var request = await _db.Queryable<SrmPurchaseRequest>().Where(r => r.Id == id).FirstAsync();
             if (request == null) return null;
 
             var items = await _db.Queryable<SrmPurchaseRequestItem>()
@@ -80,7 +80,7 @@ namespace BusinessManager.Business.SrmManager.Service
             };
         }
 
-        public async Task<long> CreateAsync(long userId, SrmPurchaseRequestReq req)
+        public async Task<string> CreateAsync(string userId, SrmPurchaseRequestReq req)
         {
             _db.Ado.BeginTran();
             try
@@ -88,7 +88,7 @@ namespace BusinessManager.Business.SrmManager.Service
                 var request = new SrmPurchaseRequest
                 {
                     RequestNo = "PR" + DateTime.Now.ToString("yyyyMMddHHmmss") + new Random().Next(1000, 9999),
-                    ApplicantId = userId.ToString(),
+                    ApplicantId = userId,
                     DepartmentId = req.DepartmentId,
                     Status = 1,
                     TotalAmount = 0,
@@ -98,6 +98,7 @@ namespace BusinessManager.Business.SrmManager.Service
                 };
 
                 var requestId = await _db.Insertable(request).ExecuteReturnIdentityAsync();
+                if (requestId == null) requestId = Guid.NewGuid().ToString("N");
 
                 decimal totalAmount = 0;
                 foreach (var item in req.Items)
@@ -107,7 +108,7 @@ namespace BusinessManager.Business.SrmManager.Service
 
                     var requestItem = new SrmPurchaseRequestItem
                     {
-                        RequestId = requestId.ToString(),
+                        RequestId = requestId,
                         GoodsId = item.GoodsId,
                         GoodsName = item.GoodsName,
                         Specification = item.Specification,
@@ -123,11 +124,11 @@ namespace BusinessManager.Business.SrmManager.Service
                 request.TotalAmount = totalAmount;
                 await _db.Updateable(request)
                     .SetColumns(r => r.TotalAmount, totalAmount)
-                    .Where(r => r.Id == requestId.ToString())
+                    .Where(r => r.Id == requestId)
                     .ExecuteCommandAsync();
 
                 _db.Ado.CommitTran();
-                return requestId != null ? long.Parse(requestId) : 0;
+                return requestId;
             }
             catch
             {
@@ -148,7 +149,7 @@ namespace BusinessManager.Business.SrmManager.Service
                 request.Remark = req.Remark;
                 await _db.Updateable(request).ExecuteCommandAsync();
 
-                await _db.Deleteable<SrmPurchaseRequestItem>().Where(i => i.RequestId == req.Id.ToString()).ExecuteCommandAsync();
+                await _db.Deleteable<SrmPurchaseRequestItem>().Where(i => i.RequestId == req.Id).ExecuteCommandAsync();
 
                 decimal totalAmount = 0;
                 foreach (var item in req.Items)
@@ -173,7 +174,7 @@ namespace BusinessManager.Business.SrmManager.Service
 
                 await _db.Updateable<SrmPurchaseRequest>()
                     .SetColumns(r => r.TotalAmount, totalAmount)
-                    .Where(r => r.Id == req.Id.ToString())
+                    .Where(r => r.Id == req.Id)
                     .ExecuteCommandAsync();
 
                 _db.Ado.CommitTran();
@@ -186,13 +187,13 @@ namespace BusinessManager.Business.SrmManager.Service
             }
         }
 
-        public async Task<bool> DeleteAsync(long id)
+        public async Task<bool> DeleteAsync(string id)
         {
             _db.Ado.BeginTran();
             try
             {
-                await _db.Deleteable<SrmPurchaseRequestItem>().Where(i => i.RequestId == id.ToString()).ExecuteCommandAsync();
-                var result = await _db.Deleteable<SrmPurchaseRequest>().Where(r => r.Id == id.ToString()).ExecuteCommandHasChangeAsync();
+                await _db.Deleteable<SrmPurchaseRequestItem>().Where(i => i.RequestId == id).ExecuteCommandAsync();
+                var result = await _db.Deleteable<SrmPurchaseRequest>().Where(r => r.Id == id).ExecuteCommandHasChangeAsync();
                 _db.Ado.CommitTran();
                 return result;
             }
@@ -203,14 +204,14 @@ namespace BusinessManager.Business.SrmManager.Service
             }
         }
 
-        public async Task<bool> ApproveAsync(long userId, long id, bool approved)
+        public async Task<bool> ApproveAsync(string userId, string id, bool approved)
         {
-            var request = await _db.Queryable<SrmPurchaseRequest>().Where(r => r.Id == id.ToString()).FirstAsync();
+            var request = await _db.Queryable<SrmPurchaseRequest>().Where(r => r.Id == id).FirstAsync();
             if (request == null || request.Status != 1) return false;
 
             request.Status = approved ? 2 : 3;
             request.ApprovedDate = DateTime.Now;
-            request.ApproverId = userId.ToString();
+            request.ApproverId = userId;
 
             return await _db.Updateable(request).ExecuteCommandHasChangeAsync();
         }

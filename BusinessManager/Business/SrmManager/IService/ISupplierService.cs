@@ -8,9 +8,9 @@ namespace BusinessManager.Business.SrmManager.IService
     public interface ISupplierService
     {
         Task<PageResponse<SrmSupplierRes>> GetPageDataAsync(int pageIndex, int pageSize, string keyword = null);
-        Task<SrmSupplierRes> GetByIdAsync(long id);
-        Task<long> CreateAsync(SrmSupplierReq req);
+        Task<SrmSupplierRes> GetByIdAsync(string id);
+        Task<string> CreateAsync(SrmSupplierReq req);
         Task<bool> UpdateAsync(SrmSupplierReq req);
-        Task<bool> DeleteAsync(long id);
+        Task<bool> DeleteAsync(string id);
     }
 }

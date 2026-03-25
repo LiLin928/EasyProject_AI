@@ -25,13 +25,13 @@ namespace BusinessManager.Business.SrmManager.Service
             return PageResponse<SrmPaymentRequestRes>.Create(list.Adapt<List<SrmPaymentRequestRes>>(), list.Count, pageIndex, pageSize);
         }
 
-        public async Task<SrmPaymentRequestRes> GetByIdAsync(long id)
+        public async Task<SrmPaymentRequestRes> GetByIdAsync(string id)
         {
-            var payment = await _db.Queryable<SrmPaymentRequest>().Where(p => p.Id == id.ToString()).FirstAsync();
+            var payment = await _db.Queryable<SrmPaymentRequest>().Where(p => p.Id == id).FirstAsync();
             return payment?.Adapt<SrmPaymentRequestRes>();
         }
 
-        public async Task<long> CreateAsync(long userId, SrmPaymentRequestReq req)
+        public async Task<string> CreateAsync(string userId, SrmPaymentRequestReq req)
         {
             var entity = req.Adapt<SrmPaymentRequest>();
             entity.RequestNo = "PAY" + DateTime.Now.ToString("yyyyMMddHHmmss") + new Random().Next(1000, 9999);
@@ -41,9 +41,9 @@ namespace BusinessManager.Business.SrmManager.Service
             return await _db.Insertable(entity).ExecuteReturnIdentityAsync();
         }
 
-        public async Task<bool> ApproveAsync(long id, bool approved)
+        public async Task<bool> ApproveAsync(string id, bool approved)
         {
-            var payment = await _db.Queryable<SrmPaymentRequest>().Where(p => p.Id == id.ToString()).FirstAsync();
+            var payment = await _db.Queryable<SrmPaymentRequest>().Where(p => p.Id == id).FirstAsync();
             if (payment == null || payment.Status != 1) return false;
             
             payment.Status = approved ? 2 : 4;
@@ -51,9 +51,9 @@ namespace BusinessManager.Business.SrmManager.Service
             return await _db.Updateable(payment).ExecuteCommandHasChangeAsync();
         }
 
-        public async Task<bool> PayAsync(long id)
+        public async Task<bool> PayAsync(string id)
         {
-            var payment = await _db.Queryable<SrmPaymentRequest>().Where(p => p.Id == id.ToString()).FirstAsync();
+            var payment = await _db.Queryable<SrmPaymentRequest>().Where(p => p.Id == id).FirstAsync();
             if (payment == null) return false;
             payment.Status = 3;
             payment.PaymentDate = DateTime.Now;

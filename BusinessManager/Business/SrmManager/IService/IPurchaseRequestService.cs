@@ -8,10 +8,10 @@ namespace BusinessManager.Business.SrmManager.IService
     public interface IPurchaseRequestService
     {
         Task<PageResponse<SrmPurchaseRequestRes>> GetPageDataAsync(int pageIndex, int pageSize, int? status = null, string keyword = null);
-        Task<SrmPurchaseRequestRes> GetByIdAsync(long id);
-        Task<long> CreateAsync(long userId, SrmPurchaseRequestReq req);
+        Task<SrmPurchaseRequestRes> GetByIdAsync(string id);
+        Task<string> CreateAsync(string userId, SrmPurchaseRequestReq req);
         Task<bool> UpdateAsync(SrmPurchaseRequestReq req);
-        Task<bool> DeleteAsync(long id);
-        Task<bool> ApproveAsync(long userId, long id, bool approved);
+        Task<bool> DeleteAsync(string id);
+        Task<bool> ApproveAsync(string userId, string id, bool approved);
     }
 }

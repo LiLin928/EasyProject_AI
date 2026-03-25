@@ -38,7 +38,7 @@ namespace BusinessManager.BasicDataManager.Service
             return role?.Adapt<BaseRoleRes>();
         }
 
-        public async Task<long> CreateAsync(BaseRoleReq req)
+        public async Task<string> CreateAsync(BaseRoleReq req)
         {
             var entity = req.Adapt<BaseRole>();
             entity.CreateTime = DateTime.Now;

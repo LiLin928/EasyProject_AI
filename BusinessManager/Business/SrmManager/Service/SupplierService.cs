@@ -24,13 +24,13 @@ namespace BusinessManager.Business.SrmManager.Service
             return PageResponse<SrmSupplierRes>.Create(list.Adapt<List<SrmSupplierRes>>(), list.Count, pageIndex, pageSize);
         }
 
-        public async Task<SrmSupplierRes> GetByIdAsync(long id)
+        public async Task<SrmSupplierRes> GetByIdAsync(string id)
         {
-            var supplier = await _db.Queryable<SrmSupplier>().Where(s => s.Id == id.ToString()).FirstAsync();
+            var supplier = await _db.Queryable<SrmSupplier>().Where(s => s.Id == id).FirstAsync();
             return supplier?.Adapt<SrmSupplierRes>();
         }
 
-        public async Task<long> CreateAsync(SrmSupplierReq req)
+        public async Task<string> CreateAsync(SrmSupplierReq req)
         {
             var entity = req.Adapt<SrmSupplier>();
             entity.CreateTime = DateTime.Now;
@@ -43,9 +43,9 @@ namespace BusinessManager.Business.SrmManager.Service
             return await _db.Updateable(entity).ExecuteCommandHasChangeAsync();
         }
 
-        public async Task<bool> DeleteAsync(long id)
+        public async Task<bool> DeleteAsync(string id)
         {
-            return await _db.Deleteable<SrmSupplier>().Where(s => s.Id == id.ToString()).ExecuteCommandHasChangeAsync();
+            return await _db.Deleteable<SrmSupplier>().Where(s => s.Id == id).ExecuteCommandHasChangeAsync();
         }
     }
 }

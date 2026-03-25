@@ -44,7 +44,7 @@ namespace BusinessManager.WorkflowManager.Service
             return await _db.Updateable(entity).ExecuteCommandHasChangeAsync();
         }
 
-        public async Task<bool> DeleteAsync(long id)
+        public async Task<bool> DeleteAsync(string id)
         {
             return await _db.Deleteable<WorkflowDefinition>().Where(w => w.Id == id).ExecuteCommandHasChangeAsync();
         }

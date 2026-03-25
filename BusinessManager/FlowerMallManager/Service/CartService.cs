@@ -78,7 +78,7 @@ namespace BusinessManager.FlowerMallManager.Service
                 .ExecuteCommandHasChangeAsync();
         }
 
-        public async Task<bool> DeleteAsync(long userId, long goodsId)
+        public async Task<bool> DeleteAsync(string userId, string goodsId)
         {
             return await _db.Deleteable<MallCart>()
                 .Where(c => c.UserId == userId && c.GoodsId == goodsId)

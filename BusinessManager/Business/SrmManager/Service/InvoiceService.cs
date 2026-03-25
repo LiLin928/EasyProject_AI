@@ -25,13 +25,13 @@ namespace BusinessManager.Business.SrmManager.Service
             return PageResponse<SrmInvoiceRes>.Create(list.Adapt<List<SrmInvoiceRes>>(), list.Count, pageIndex, pageSize);
         }
 
-        public async Task<SrmInvoiceRes> GetByIdAsync(long id)
+        public async Task<SrmInvoiceRes> GetByIdAsync(string id)
         {
-            var invoice = await _db.Queryable<SrmInvoice>().Where(i => i.Id == id.ToString()).FirstAsync();
+            var invoice = await _db.Queryable<SrmInvoice>().Where(i => i.Id == id).FirstAsync();
             return invoice?.Adapt<SrmInvoiceRes>();
         }
 
-        public async Task<long> CreateAsync(SrmInvoiceReq req)
+        public async Task<string> CreateAsync(SrmInvoiceReq req)
         {
             var entity = req.Adapt<SrmInvoice>();
             entity.Status = 1;
@@ -45,16 +45,16 @@ namespace BusinessManager.Business.SrmManager.Service
             return await _db.Updateable(entity).ExecuteCommandHasChangeAsync();
         }
 
-        public async Task<bool> DeleteAsync(long id)
+        public async Task<bool> DeleteAsync(string id)
         {
-            return await _db.Deleteable<SrmInvoice>().Where(i => i.Id == id.ToString()).ExecuteCommandHasChangeAsync();
+            return await _db.Deleteable<SrmInvoice>().Where(i => i.Id == id).ExecuteCommandHasChangeAsync();
         }
 
-        public async Task<bool> AuditAsync(long id, bool approved)
+        public async Task<bool> AuditAsync(string id, bool approved)
         {
             return await _db.Updateable<SrmInvoice>()
                 .SetColumns(i => i.Status, approved ? 2 : 3)
-                .Where(i => i.Id == id.ToString())
+                .Where(i => i.Id == id)
                 .ExecuteCommandHasChangeAsync();
         }
     }
