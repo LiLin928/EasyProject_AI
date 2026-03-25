@@ -197,6 +197,16 @@ namespace EasyWechatModels.Dto
         public DateTime CreateTime { get; set; }
     }
 
+    public class SrmSettlementReq
+    {
+        public long? Id { get; set; }
+        public long SupplierId { get; set; }
+        public decimal TotalAmount { get; set; }
+        public decimal PaidAmount { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+    }
+
     #endregion
 
     #region 供应商管理

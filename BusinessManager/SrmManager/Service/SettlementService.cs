@@ -8,9 +8,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
+namespace BusinessManager.SrmManager.IService
+{
+    public interface ISettlementService
+    {
+        Task<PageResponse<SrmSettlementRes>> GetPageDataAsync(int pageIndex, int pageSize, int? status = null, string keyword = null);
+        Task<SrmSettlementRes> GetByIdAsync(long id);
+        Task<long> CreateAsync(SrmSettlement settlement);
+        Task<bool> CompleteAsync(long id);
+    }
+}
+
 namespace BusinessManager.SrmManager.Service
 {
-    public class SettlementService : BaseService<SrmSettlement>, ISettlementService
+    public class SettlementService : BaseService<SrmSettlement>, BusinessManager.SrmManager.IService.ISettlementService
     {
         public SettlementService(ISqlSugarClient db) : base(db) { }
 
@@ -45,13 +56,5 @@ namespace BusinessManager.SrmManager.Service
                 .Where(s => s.Id == id)
                 .ExecuteCommandHasChangeAsync();
         }
-    }
-
-    public interface ISettlementService
-    {
-        Task<PageResponse<SrmSettlementRes>> GetPageDataAsync(int pageIndex, int pageSize, int? status = null, string keyword = null);
-        Task<SrmSettlementRes> GetByIdAsync(long id);
-        Task<long> CreateAsync(SrmSettlement settlement);
-        Task<bool> CompleteAsync(long id);
     }
 }

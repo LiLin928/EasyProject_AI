@@ -80,7 +80,9 @@ const shortcuts = [
   { name: '供应商', path: '/srm/supplier', icon: 'User' },
   { name: '发票管理', path: '/srm/invoice', icon: 'Tickets' },
   { name: '付款管理', path: '/srm/payment', icon: 'Money' },
-  { name: '结算管理', path: '/srm/settlement', icon: 'Wallet' }
+  { name: '结算管理', path: '/srm/settlement', icon: 'Wallet' },
+  { name: '菜单管理', path: '/basic/menu', icon: 'Menu' },
+  { name: '工作流', path: '/workflow/list', icon: 'Connection' }
 ]
 </script>
 
