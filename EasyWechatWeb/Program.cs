@@ -109,6 +109,7 @@ builder.Services.AddScoped<BusinessManager.FlowerMallManager.IService.IAddressSe
 builder.Services.AddScoped<BusinessManager.FlowerMallManager.IService.IBannerService, BusinessManager.FlowerMallManager.Service.BannerService>();
 builder.Services.AddScoped<BusinessManager.SrmManager.IService.IPurchaseRequestService, BusinessManager.SrmManager.Service.PurchaseRequestService>();
 builder.Services.AddScoped<BusinessManager.SrmManager.IService.ISupplierService, BusinessManager.SrmManager.Service.SupplierService>();
+builder.Services.AddScoped<BusinessManager.SrmManager.IService.IPurchaseOrderService, BusinessManager.SrmManager.Service.PurchaseOrderService>();
 
 // 配置 SqlSugar
 builder.Services.AddScoped<ISqlSugarClient>(provider =>
