@@ -1,3 +1,4 @@
+using BusinessManager.Business.SrmManager.IService;
 using CommonManager.Base;
 using EasyWechatModels.Dto;
 using EasyWechatModels.Entitys;
@@ -8,20 +9,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace BusinessManager.SrmManager.IService
+namespace BusinessManager.Business.SrmManager.Service
 {
-    public interface ISettlementService
-    {
-        Task<PageResponse<SrmSettlementRes>> GetPageDataAsync(int pageIndex, int pageSize, int? status = null, string keyword = null);
-        Task<SrmSettlementRes> GetByIdAsync(long id);
-        Task<long> CreateAsync(SrmSettlement settlement);
-        Task<bool> CompleteAsync(long id);
-    }
-}
-
-namespace BusinessManager.SrmManager.Service
-{
-    public class SettlementService : BaseService<SrmSettlement>, BusinessManager.SrmManager.IService.ISettlementService
+    public class SettlementService : BaseService<SrmSettlement>, ISettlementService
     {
         public SettlementService(ISqlSugarClient db) : base(db) { }
 
@@ -38,7 +28,7 @@ namespace BusinessManager.SrmManager.Service
 
         public async Task<SrmSettlementRes> GetByIdAsync(long id)
         {
-            var settlement = await _db.Queryable<SrmSettlement>().Where(s => s.Id == id).FirstAsync();
+            var settlement = await _db.Queryable<SrmSettlement>().Where(s => s.Id == id.ToString()).FirstAsync();
             return settlement?.Adapt<SrmSettlementRes>();
         }
 
@@ -53,8 +43,16 @@ namespace BusinessManager.SrmManager.Service
         {
             return await _db.Updateable<SrmSettlement>()
                 .SetColumns(s => s.Status, 2)
-                .Where(s => s.Id == id)
+                .Where(s => s.Id == id.ToString())
                 .ExecuteCommandHasChangeAsync();
         }
+    }
+
+    public interface ISettlementService
+    {
+        Task<PageResponse<SrmSettlementRes>> GetPageDataAsync(int pageIndex, int pageSize, int? status = null, string keyword = null);
+        Task<SrmSettlementRes> GetByIdAsync(long id);
+        Task<long> CreateAsync(SrmSettlement settlement);
+        Task<bool> CompleteAsync(long id);
     }
 }

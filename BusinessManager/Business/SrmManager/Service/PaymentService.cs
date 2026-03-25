@@ -1,4 +1,3 @@
-using BusinessManager.SrmManager.IService;
 using CommonManager.Base;
 using EasyWechatModels.Dto;
 using EasyWechatModels.Entitys;
@@ -6,11 +5,12 @@ using Mapster;
 using SqlSugar;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
-namespace BusinessManager.SrmManager.Service
+namespace BusinessManager.Business.SrmManager.Service
 {
-    public class PaymentService : BaseService<SrmPaymentRequest>, IPaymentService
+    public class PaymentService : BaseService<SrmPaymentRequest>, BusinessManager.Business.SrmManager.IService.IPaymentService
     {
         public PaymentService(ISqlSugarClient db) : base(db) { }
 
@@ -27,7 +27,7 @@ namespace BusinessManager.SrmManager.Service
 
         public async Task<SrmPaymentRequestRes> GetByIdAsync(long id)
         {
-            var payment = await _db.Queryable<SrmPaymentRequest>().Where(p => p.Id == id).FirstAsync();
+            var payment = await _db.Queryable<SrmPaymentRequest>().Where(p => p.Id == id.ToString()).FirstAsync();
             return payment?.Adapt<SrmPaymentRequestRes>();
         }
 
@@ -43,7 +43,7 @@ namespace BusinessManager.SrmManager.Service
 
         public async Task<bool> ApproveAsync(long id, bool approved)
         {
-            var payment = await _db.Queryable<SrmPaymentRequest>().Where(p => p.Id == id).FirstAsync();
+            var payment = await _db.Queryable<SrmPaymentRequest>().Where(p => p.Id == id.ToString()).FirstAsync();
             if (payment == null || payment.Status != 1) return false;
             
             payment.Status = approved ? 2 : 4;
@@ -53,7 +53,7 @@ namespace BusinessManager.SrmManager.Service
 
         public async Task<bool> PayAsync(long id)
         {
-            var payment = await _db.Queryable<SrmPaymentRequest>().Where(p => p.Id == id).FirstAsync();
+            var payment = await _db.Queryable<SrmPaymentRequest>().Where(p => p.Id == id.ToString()).FirstAsync();
             if (payment == null) return false;
             payment.Status = 3;
             payment.PaymentDate = DateTime.Now;

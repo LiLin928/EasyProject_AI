@@ -1,8 +1,9 @@
 using CommonManager.Base;
 using EasyWechatModels.Dto;
+using EasyWechatModels.Entitys;
 using System.Threading.Tasks;
 
-namespace BusinessManager.SrmManager.IService
+namespace BusinessManager.Business.SrmManager.IService
 {
     public interface IPurchaseRequestService
     {

@@ -1,129 +1,160 @@
+using SqlSugar;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EasyWechatModels.Entitys
 {
-    /// <summary>
-    /// 商品表
-    /// </summary>
+    #region 商品
+
     [Table("mall_goods")]
+    [SugarTable("mall_goods", "商品表")]
     public class MallGoods
     {
         [Key]
-        public long Id { get; set; }
+        [SugarColumn(IsPrimaryKey = true, ColumnDataType = "varchar")]
+        public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+        [SugarColumn(Length = 200, IsNullable = true)]
         public string Name { get; set; }
+
+        [SugarColumn(Length = 1000, IsNullable = true)]
         public string Description { get; set; }
-        public decimal Price { get; set; }
-        public decimal OriginalPrice { get; set; }
-        public int Stock { get; set; }
+
+        [SugarColumn(IsNullable = true)]
+        public decimal? Price { get; set; }
+
+        [SugarColumn(IsNullable = true)]
+        public decimal? OriginalPrice { get; set; }
+
+        [SugarColumn(IsNullable = true)]
+        public int? Stock { get; set; }
+
+        [SugarColumn(Length = 500, IsNullable = true)]
         public string Image { get; set; }
+
+        [SugarColumn(Length = 2000, IsNullable = true)]
         public string Images { get; set; }
-        public int CategoryId { get; set; }
-        public int Status { get; set; } = 1;
-        public int Sort { get; set; }
-        public DateTime CreateTime { get; set; } = DateTime.Now;
+
+        [SugarColumn(Length = 50, IsNullable = true)]
+        public string CategoryId { get; set; }
+
+        [SugarColumn(IsNullable = true)]
+        public int? Status { get; set; } = 1;
+
+        [SugarColumn(IsNullable = true)]
+        public int? Sort { get; set; }
+
+        [SugarColumn(IsNullable = true)]
+        public DateTime? CreateTime { get; set; } = DateTime.Now;
+
+        [SugarColumn(IsNullable = true)]
         public DateTime? UpdateTime { get; set; }
     }
 
-    /// <summary>
-    /// 商品分类表
-    /// </summary>
-    [Table("mall_category")]
-    public class MallCategory
-    {
-        [Key]
-        public long Id { get; set; }
-        public string Name { get; set; }
-        public string Icon { get; set; }
-        public int Sort { get; set; }
-        public int Status { get; set; } = 1;
-        public DateTime CreateTime { get; set; } = DateTime.Now;
-    }
+    #endregion
 
-    /// <summary>
-    /// 购物车表
-    /// </summary>
+    #region 购物车
+
     [Table("mall_cart")]
+    [SugarTable("mall_cart", "购物车表")]
     public class MallCart
     {
         [Key]
-        public long Id { get; set; }
-        public long UserId { get; set; }
-        public long GoodsId { get; set; }
-        public int Count { get; set; }
-        public DateTime CreateTime { get; set; } = DateTime.Now;
+        [SugarColumn(IsPrimaryKey = true, ColumnDataType = "varchar")]
+        public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+        [SugarColumn(Length = 50, IsNullable = true)]
+        public string UserId { get; set; }
+
+        [SugarColumn(Length = 50, IsNullable = true)]
+        public string GoodsId { get; set; }
+
+        [SugarColumn(IsNullable = true)]
+        public int? Count { get; set; }
+
+        [SugarColumn(IsNullable = true)]
+        public DateTime? CreateTime { get; set; } = DateTime.Now;
+
+        [SugarColumn(IsNullable = true)]
         public DateTime? UpdateTime { get; set; }
     }
 
-    /// <summary>
-    /// 订单表
-    /// </summary>
+    #endregion
+
+    #region 订单
+
     [Table("mall_order")]
+    [SugarTable("mall_order", "订单表")]
     public class MallOrder
     {
         [Key]
-        public long Id { get; set; }
+        [SugarColumn(IsPrimaryKey = true, ColumnDataType = "varchar")]
+        public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+        [SugarColumn(Length = 50, IsNullable = true)]
         public string OrderNo { get; set; }
-        public long UserId { get; set; }
-        public decimal TotalAmount { get; set; }
-        public decimal PayAmount { get; set; }
-        public int Status { get; set; } = 0;
+
+        [SugarColumn(Length = 50, IsNullable = true)]
+        public string RequestId { get; set; }
+
+        [SugarColumn(Length = 50, IsNullable = true)]
+        public string SupplierId { get; set; }
+
+        [SugarColumn(Length = 200, IsNullable = true)]
+        public string SupplierName { get; set; }
+
+        [SugarColumn(IsNullable = true)]
+        public int? Status { get; set; }
+
+        [SugarColumn(IsNullable = true)]
+        public decimal? TotalAmount { get; set; }
+
+        [SugarColumn(IsNullable = true)]
+        public decimal? PaidAmount { get; set; }
+
+        [SugarColumn(IsNullable = true)]
+        public DateTime? OrderDate { get; set; }
+
+        [SugarColumn(IsNullable = true)]
+        public DateTime? DeliverDate { get; set; }
+
+        [SugarColumn(IsNullable = true)]
+        public DateTime? ReceiveDate { get; set; }
+
+        [SugarColumn(Length = 500, IsNullable = true)]
         public string Remark { get; set; }
-        public DateTime CreateTime { get; set; } = DateTime.Now;
-        public DateTime? PayTime { get; set; }
-        public DateTime? DeliverTime { get; set; }
-        public DateTime? ReceiveTime { get; set; }
+
+        [SugarColumn(IsNullable = true)]
+        public DateTime? CreateTime { get; set; } = DateTime.Now;
     }
 
-    /// <summary>
-    /// 订单详情表
-    /// </summary>
     [Table("mall_order_item")]
+    [SugarTable("mall_order_item", "订单明细表")]
     public class MallOrderItem
     {
         [Key]
-        public long Id { get; set; }
-        public long OrderId { get; set; }
-        public long GoodsId { get; set; }
+        [SugarColumn(IsPrimaryKey = true, ColumnDataType = "varchar")]
+        public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+        [SugarColumn(Length = 50, IsNullable = true)]
+        public string OrderId { get; set; }
+
+        [SugarColumn(Length = 50, IsNullable = true)]
+        public string GoodsId { get; set; }
+
+        [SugarColumn(Length = 200, IsNullable = true)]
         public string GoodsName { get; set; }
+
+        [SugarColumn(Length = 500, IsNullable = true)]
         public string GoodsImage { get; set; }
-        public decimal Price { get; set; }
-        public int Quantity { get; set; }
+
+        [SugarColumn(IsNullable = true)]
+        public decimal? Price { get; set; }
+
+        [SugarColumn(IsNullable = true)]
+        public int? Quantity { get; set; }
     }
 
-    /// <summary>
-    /// 收货地址表
-    /// </summary>
-    [Table("mall_address")]
-    public class MallAddress
-    {
-        [Key]
-        public long Id { get; set; }
-        public long UserId { get; set; }
-        public string Receiver { get; set; }
-        public string Phone { get; set; }
-        public string Province { get; set; }
-        public string City { get; set; }
-        public string District { get; set; }
-        public string Detail { get; set; }
-        public int IsDefault { get; set; }
-        public DateTime CreateTime { get; set; } = DateTime.Now;
-    }
-
-    /// <summary>
-    /// 轮播图表
-    /// </summary>
-    [Table("mall_banner")]
-    public class MallBanner
-    {
-        [Key]
-        public long Id { get; set; }
-        public string Title { get; set; }
-        public string Image { get; set; }
-        public string Link { get; set; }
-        public int Sort { get; set; }
-        public int Status { get; set; } = 1;
-        public DateTime CreateTime { get; set; } = DateTime.Now;
-    }
+    #endregion
 }

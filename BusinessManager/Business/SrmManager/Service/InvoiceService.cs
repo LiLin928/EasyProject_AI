@@ -1,4 +1,3 @@
-using BusinessManager.SrmManager.IService;
 using CommonManager.Base;
 using EasyWechatModels.Dto;
 using EasyWechatModels.Entitys;
@@ -9,13 +8,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace BusinessManager.SrmManager.Service
+namespace BusinessManager.Business.SrmManager.Service
 {
-    public class InvoiceService : BaseService<SrmInvoice>, IInvoiceService
+    public class InvoiceService : BaseService<SrmInvoice>, BusinessManager.Business.SrmManager.IService.IInvoiceService
     {
-        public InvoiceService(ISqlSugarClient db) : base(db)
-        {
-        }
+        public InvoiceService(ISqlSugarClient db) : base(db) { }
 
         public async Task<PageResponse<SrmInvoiceRes>> GetPageDataAsync(int pageIndex, int pageSize, int? status = null, string keyword = null)
         {
@@ -30,14 +27,14 @@ namespace BusinessManager.SrmManager.Service
 
         public async Task<SrmInvoiceRes> GetByIdAsync(long id)
         {
-            var invoice = await _db.Queryable<SrmInvoice>().Where(i => i.Id == id).FirstAsync();
+            var invoice = await _db.Queryable<SrmInvoice>().Where(i => i.Id == id.ToString()).FirstAsync();
             return invoice?.Adapt<SrmInvoiceRes>();
         }
 
         public async Task<long> CreateAsync(SrmInvoiceReq req)
         {
             var entity = req.Adapt<SrmInvoice>();
-            entity.Status = 1; // 待审核
+            entity.Status = 1;
             entity.CreateTime = DateTime.Now;
             return await _db.Insertable(entity).ExecuteReturnIdentityAsync();
         }
@@ -50,14 +47,14 @@ namespace BusinessManager.SrmManager.Service
 
         public async Task<bool> DeleteAsync(long id)
         {
-            return await _db.Deleteable<SrmInvoice>().Where(i => i.Id == id).ExecuteCommandHasChangeAsync();
+            return await _db.Deleteable<SrmInvoice>().Where(i => i.Id == id.ToString()).ExecuteCommandHasChangeAsync();
         }
 
         public async Task<bool> AuditAsync(long id, bool approved)
         {
             return await _db.Updateable<SrmInvoice>()
                 .SetColumns(i => i.Status, approved ? 2 : 3)
-                .Where(i => i.Id == id)
+                .Where(i => i.Id == id.ToString())
                 .ExecuteCommandHasChangeAsync();
         }
     }

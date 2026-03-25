@@ -1,4 +1,3 @@
-using BusinessManager.SrmManager.IService;
 using CommonManager.Base;
 using EasyWechatModels.Dto;
 using EasyWechatModels.Entitys;
@@ -9,13 +8,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace BusinessManager.SrmManager.Service
+namespace BusinessManager.Business.SrmManager.Service
 {
-    public class SupplierService : BaseService<SrmSupplier>, ISupplierService
+    public class SupplierService : BaseService<SrmSupplier>, BusinessManager.Business.SrmManager.IService.ISupplierService
     {
-        public SupplierService(ISqlSugarClient db) : base(db)
-        {
-        }
+        public SupplierService(ISqlSugarClient db) : base(db) { }
 
         public async Task<PageResponse<SrmSupplierRes>> GetPageDataAsync(int pageIndex, int pageSize, string keyword = null)
         {
@@ -29,7 +26,7 @@ namespace BusinessManager.SrmManager.Service
 
         public async Task<SrmSupplierRes> GetByIdAsync(long id)
         {
-            var supplier = await _db.Queryable<SrmSupplier>().Where(s => s.Id == id).FirstAsync();
+            var supplier = await _db.Queryable<SrmSupplier>().Where(s => s.Id == id.ToString()).FirstAsync();
             return supplier?.Adapt<SrmSupplierRes>();
         }
 
@@ -48,7 +45,7 @@ namespace BusinessManager.SrmManager.Service
 
         public async Task<bool> DeleteAsync(long id)
         {
-            return await _db.Deleteable<SrmSupplier>().Where(s => s.Id == id).ExecuteCommandHasChangeAsync();
+            return await _db.Deleteable<SrmSupplier>().Where(s => s.Id == id.ToString()).ExecuteCommandHasChangeAsync();
         }
     }
 }

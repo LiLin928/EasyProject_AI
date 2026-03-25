@@ -1,4 +1,3 @@
-using BusinessManager.SrmManager.IService;
 using CommonManager.Base;
 using EasyWechatModels.Dto;
 using EasyWechatModels.Entitys;
@@ -9,13 +8,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace BusinessManager.SrmManager.Service
+namespace BusinessManager.Business.SrmManager.Service
 {
-    public class PurchaseRequestService : BaseService<SrmPurchaseRequest>, IPurchaseRequestService
+    public class PurchaseRequestService : BaseService<SrmPurchaseRequest>, BusinessManager.Business.SrmManager.IService.IPurchaseRequestService
     {
-        public PurchaseRequestService(ISqlSugarClient db) : base(db)
-        {
-        }
+        public PurchaseRequestService(ISqlSugarClient db) : base(db) { }
 
         public async Task<PageResponse<SrmPurchaseRequestRes>> GetPageDataAsync(int pageIndex, int pageSize, int? status = null, string keyword = null)
         {
@@ -57,7 +54,7 @@ namespace BusinessManager.SrmManager.Service
 
         public async Task<SrmPurchaseRequestRes> GetByIdAsync(long id)
         {
-            var request = await _db.Queryable<SrmPurchaseRequest>().Where(r => r.Id == id).FirstAsync();
+            var request = await _db.Queryable<SrmPurchaseRequest>().Where(r => r.Id == id.ToString()).FirstAsync();
             if (request == null) return null;
 
             var items = await _db.Queryable<SrmPurchaseRequestItem>()
@@ -91,9 +88,9 @@ namespace BusinessManager.SrmManager.Service
                 var request = new SrmPurchaseRequest
                 {
                     RequestNo = "PR" + DateTime.Now.ToString("yyyyMMddHHmmss") + new Random().Next(1000, 9999),
-                    ApplicantId = userId,
+                    ApplicantId = userId.ToString(),
                     DepartmentId = req.DepartmentId,
-                    Status = 1, // 待审批
+                    Status = 1,
                     TotalAmount = 0,
                     Remark = req.Remark,
                     RequestDate = DateTime.Now,
@@ -105,12 +102,12 @@ namespace BusinessManager.SrmManager.Service
                 decimal totalAmount = 0;
                 foreach (var item in req.Items)
                 {
-                    var amount = item.UnitPrice * item.Quantity;
+                    var amount = (item.UnitPrice ?? 0) * (item.Quantity ?? 0);
                     totalAmount += amount;
 
                     var requestItem = new SrmPurchaseRequestItem
                     {
-                        RequestId = requestId,
+                        RequestId = requestId.ToString(),
                         GoodsId = item.GoodsId,
                         GoodsName = item.GoodsName,
                         Specification = item.Specification,
@@ -126,11 +123,11 @@ namespace BusinessManager.SrmManager.Service
                 request.TotalAmount = totalAmount;
                 await _db.Updateable(request)
                     .SetColumns(r => r.TotalAmount, totalAmount)
-                    .Where(r => r.Id == requestId)
+                    .Where(r => r.Id == requestId.ToString())
                     .ExecuteCommandAsync();
 
                 _db.Ado.CommitTran();
-                return requestId;
+                return requestId != null ? long.Parse(requestId) : 0;
             }
             catch
             {
@@ -151,12 +148,12 @@ namespace BusinessManager.SrmManager.Service
                 request.Remark = req.Remark;
                 await _db.Updateable(request).ExecuteCommandAsync();
 
-                await _db.Deleteable<SrmPurchaseRequestItem>().Where(i => i.RequestId == req.Id).ExecuteCommandAsync();
+                await _db.Deleteable<SrmPurchaseRequestItem>().Where(i => i.RequestId == req.Id.ToString()).ExecuteCommandAsync();
 
                 decimal totalAmount = 0;
                 foreach (var item in req.Items)
                 {
-                    var amount = item.UnitPrice * item.Quantity;
+                    var amount = (item.UnitPrice ?? 0) * (item.Quantity ?? 0);
                     totalAmount += amount;
 
                     var requestItem = new SrmPurchaseRequestItem
@@ -176,7 +173,7 @@ namespace BusinessManager.SrmManager.Service
 
                 await _db.Updateable<SrmPurchaseRequest>()
                     .SetColumns(r => r.TotalAmount, totalAmount)
-                    .Where(r => r.Id == req.Id)
+                    .Where(r => r.Id == req.Id.ToString())
                     .ExecuteCommandAsync();
 
                 _db.Ado.CommitTran();
@@ -194,8 +191,8 @@ namespace BusinessManager.SrmManager.Service
             _db.Ado.BeginTran();
             try
             {
-                await _db.Deleteable<SrmPurchaseRequestItem>().Where(i => i.RequestId == id).ExecuteCommandAsync();
-                var result = await _db.Deleteable<SrmPurchaseRequest>().Where(r => r.Id == id).ExecuteCommandHasChangeAsync();
+                await _db.Deleteable<SrmPurchaseRequestItem>().Where(i => i.RequestId == id.ToString()).ExecuteCommandAsync();
+                var result = await _db.Deleteable<SrmPurchaseRequest>().Where(r => r.Id == id.ToString()).ExecuteCommandHasChangeAsync();
                 _db.Ado.CommitTran();
                 return result;
             }
@@ -208,17 +205,17 @@ namespace BusinessManager.SrmManager.Service
 
         public async Task<bool> ApproveAsync(long userId, long id, bool approved)
         {
-            var request = await _db.Queryable<SrmPurchaseRequest>().Where(r => r.Id == id).FirstAsync();
+            var request = await _db.Queryable<SrmPurchaseRequest>().Where(r => r.Id == id.ToString()).FirstAsync();
             if (request == null || request.Status != 1) return false;
 
             request.Status = approved ? 2 : 3;
             request.ApprovedDate = DateTime.Now;
-            request.ApproverId = userId;
+            request.ApproverId = userId.ToString();
 
             return await _db.Updateable(request).ExecuteCommandHasChangeAsync();
         }
 
-        private string GetStatusText(int status)
+        private string GetStatusText(int? status)
         {
             return status switch
             {

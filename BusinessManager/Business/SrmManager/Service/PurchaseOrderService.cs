@@ -1,4 +1,3 @@
-using BusinessManager.SrmManager.IService;
 using CommonManager.Base;
 using EasyWechatModels.Dto;
 using EasyWechatModels.Entitys;
@@ -9,13 +8,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace BusinessManager.SrmManager.Service
+namespace BusinessManager.Business.SrmManager.Service
 {
-    public class PurchaseOrderService : BaseService<SrmPurchaseOrder>, IPurchaseOrderService
+    public class PurchaseOrderService : BaseService<SrmPurchaseOrder>, BusinessManager.Business.SrmManager.IService.IPurchaseOrderService
     {
-        public PurchaseOrderService(ISqlSugarClient db) : base(db)
-        {
-        }
+        public PurchaseOrderService(ISqlSugarClient db) : base(db) { }
 
         public async Task<PageResponse<SrmPurchaseOrderRes>> GetPageDataAsync(int pageIndex, int pageSize, int? status = null, string keyword = null)
         {
@@ -58,7 +55,7 @@ namespace BusinessManager.SrmManager.Service
 
         public async Task<SrmPurchaseOrderRes> GetByIdAsync(long id)
         {
-            var order = await _db.Queryable<SrmPurchaseOrder>().Where(o => o.Id == id).FirstAsync();
+            var order = await _db.Queryable<SrmPurchaseOrder>().Where(o => o.Id == id.ToString()).FirstAsync();
             if (order == null) return null;
 
             var items = await _db.Queryable<SrmPurchaseOrderItem>()
@@ -95,7 +92,7 @@ namespace BusinessManager.SrmManager.Service
                     OrderNo = "PO" + DateTime.Now.ToString("yyyyMMddHHmmss") + new Random().Next(1000, 9999),
                     RequestId = req.RequestId,
                     SupplierId = req.SupplierId,
-                    Status = 1, // 待确认
+                    Status = 1,
                     TotalAmount = 0,
                     OrderDate = DateTime.Now,
                     Remark = req.Remark,
@@ -107,12 +104,12 @@ namespace BusinessManager.SrmManager.Service
                 decimal totalAmount = 0;
                 foreach (var item in req.Items)
                 {
-                    var amount = item.UnitPrice * item.Quantity;
+                    var amount = (item.UnitPrice ?? 0) * (item.Quantity ?? 0);
                     totalAmount += amount;
 
                     var orderItem = new SrmPurchaseOrderItem
                     {
-                        OrderId = orderId,
+                        OrderId = orderId.ToString(),
                         GoodsId = item.GoodsId,
                         GoodsName = item.GoodsName,
                         Specification = item.Specification,
@@ -128,11 +125,11 @@ namespace BusinessManager.SrmManager.Service
                 order.TotalAmount = totalAmount;
                 await _db.Updateable(order)
                     .SetColumns(o => o.TotalAmount, totalAmount)
-                    .Where(o => o.Id == orderId)
+                    .Where(o => o.Id == orderId.ToString())
                     .ExecuteCommandAsync();
 
                 _db.Ado.CommitTran();
-                return orderId;
+                return orderId != null ? long.Parse(orderId) : 0;
             }
             catch
             {
@@ -156,8 +153,8 @@ namespace BusinessManager.SrmManager.Service
             _db.Ado.BeginTran();
             try
             {
-                await _db.Deleteable<SrmPurchaseOrderItem>().Where(i => i.OrderId == id).ExecuteCommandAsync();
-                var result = await _db.Deleteable<SrmPurchaseOrder>().Where(o => o.Id == id).ExecuteCommandHasChangeAsync();
+                await _db.Deleteable<SrmPurchaseOrderItem>().Where(i => i.OrderId == id.ToString()).ExecuteCommandAsync();
+                var result = await _db.Deleteable<SrmPurchaseOrder>().Where(o => o.Id == id.ToString()).ExecuteCommandHasChangeAsync();
                 _db.Ado.CommitTran();
                 return result;
             }
@@ -170,22 +167,22 @@ namespace BusinessManager.SrmManager.Service
 
         public async Task<bool> ConfirmAsync(long id)
         {
-            return await _db.Updateable<SrmPurchaseOrder>()
-                .SetColumns(o => o.Status, 2) // 已确认
-                .Where(o => o.Id == id)
-                .ExecuteCommandHasChangeAsync();
+            var order = await _db.Queryable<SrmPurchaseOrder>().Where(o => o.Id == id.ToString()).FirstAsync();
+            if (order == null) return false;
+            order.Status = 2;
+            return await _db.Updateable(order).ExecuteCommandHasChangeAsync();
         }
 
         public async Task<bool> ReceiveAsync(long id)
         {
-            var order = await _db.Queryable<SrmPurchaseOrder>().Where(o => o.Id == id).FirstAsync();
+            var order = await _db.Queryable<SrmPurchaseOrder>().Where(o => o.Id == id.ToString()).FirstAsync();
             if (order == null) return false;
             order.Status = 4;
             order.ReceiveDate = DateTime.Now;
             return await _db.Updateable(order).ExecuteCommandHasChangeAsync();
         }
 
-        private string GetStatusText(int status)
+        private string GetStatusText(int? status)
         {
             return status switch
             {

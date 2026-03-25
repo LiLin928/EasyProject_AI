@@ -7,15 +7,15 @@ namespace EasyWechatModels.Dto
     /// </summary>
     public class BaseUsersRes
     {
-        public long Id { get; set; }
+        public string Id { get; set; }
         public string Username { get; set; }
         public string Nickname { get; set; }
         public string Phone { get; set; }
         public string Email { get; set; }
         public string Avatar { get; set; }
-        public int Gender { get; set; }
-        public int Status { get; set; }
-        public DateTime CreateTime { get; set; }
+        public int? Gender { get; set; }
+        public int? Status { get; set; }
+        public DateTime? CreateTime { get; set; }
         public DateTime? LastLoginTime { get; set; }
     }
 
@@ -24,15 +24,15 @@ namespace EasyWechatModels.Dto
     /// </summary>
     public class BaseUsersReq
     {
-        public long? Id { get; set; }
+        public string? Id { get; set; }
         public string Username { get; set; }
         public string Password { get; set; }
         public string Nickname { get; set; }
         public string Phone { get; set; }
         public string Email { get; set; }
         public string Avatar { get; set; }
-        public int Gender { get; set; }
-        public int Status { get; set; } = 1;
+        public int? Gender { get; set; }
+        public int? Status { get; set; } = 1;
     }
 
     /// <summary>
@@ -40,12 +40,12 @@ namespace EasyWechatModels.Dto
     /// </summary>
     public class BaseRoleRes
     {
-        public long Id { get; set; }
+        public string Id { get; set; }
         public string RoleName { get; set; }
         public string RoleCode { get; set; }
         public string Description { get; set; }
-        public int Status { get; set; }
-        public DateTime CreateTime { get; set; }
+        public int? Status { get; set; }
+        public DateTime? CreateTime { get; set; }
     }
 
     /// <summary>
@@ -53,11 +53,11 @@ namespace EasyWechatModels.Dto
     /// </summary>
     public class BaseRoleReq
     {
-        public long? Id { get; set; }
+        public string? Id { get; set; }
         public string RoleName { get; set; }
         public string RoleCode { get; set; }
         public string Description { get; set; }
-        public int Status { get; set; } = 1;
+        public int? Status { get; set; } = 1;
     }
 
     /// <summary>
@@ -65,17 +65,17 @@ namespace EasyWechatModels.Dto
     /// </summary>
     public class BaseMenuRes
     {
-        public long Id { get; set; }
-        public long ParentId { get; set; }
+        public string Id { get; set; }
+        public string ParentId { get; set; }
         public string MenuName { get; set; }
-        public int MenuType { get; set; }
+        public int? MenuType { get; set; }
         public string Path { get; set; }
         public string Component { get; set; }
         public string Permission { get; set; }
         public string Icon { get; set; }
-        public int Sort { get; set; }
-        public int Status { get; set; }
-        public DateTime CreateTime { get; set; }
+        public int? Sort { get; set; }
+        public int? Status { get; set; }
+        public DateTime? CreateTime { get; set; }
     }
 
     /// <summary>
@@ -83,16 +83,16 @@ namespace EasyWechatModels.Dto
     /// </summary>
     public class BaseMenuReq
     {
-        public long? Id { get; set; }
-        public long ParentId { get; set; }
+        public string? Id { get; set; }
+        public string ParentId { get; set; }
         public string MenuName { get; set; }
-        public int MenuType { get; set; }
+        public int? MenuType { get; set; }
         public string Path { get; set; }
         public string Component { get; set; }
         public string Permission { get; set; }
         public string Icon { get; set; }
-        public int Sort { get; set; }
-        public int Status { get; set; } = 1;
+        public int? Sort { get; set; }
+        public int? Status { get; set; } = 1;
     }
 
     /// <summary>
@@ -100,12 +100,12 @@ namespace EasyWechatModels.Dto
     /// </summary>
     public class BaseDicRes
     {
-        public long Id { get; set; }
+        public string Id { get; set; }
         public string DicName { get; set; }
         public string DicCode { get; set; }
         public string Description { get; set; }
-        public int Status { get; set; }
-        public DateTime CreateTime { get; set; }
+        public int? Status { get; set; }
+        public DateTime? CreateTime { get; set; }
     }
 
     /// <summary>
@@ -113,10 +113,10 @@ namespace EasyWechatModels.Dto
     /// </summary>
     public class BaseDicReq
     {
-        public long? Id { get; set; }
+        public string? Id { get; set; }
         public string DicName { get; set; }
         public string DicCode { get; set; }
         public string Description { get; set; }
-        public int Status { get; set; } = 1;
+        public int? Status { get; set; } = 1;
     }
 }
