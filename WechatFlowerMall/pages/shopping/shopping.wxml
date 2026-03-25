@@ -1,0 +1,22 @@
+<view class="page">
+  <van-card
+    wx:for="{{cartList}}"
+    wx:key="id"
+    price="{{item.price}}"
+    title="{{item.name}}"
+    thumb="{{item.image}}"
+    num="{{item.count}}"
+  />
+
+  <view wx:if="{{cartList.length === 0}}" class="empty">
+    <van-empty description="购物车空空如也" />
+  </view>
+
+  <van-submit-bar
+    wx:show="{{cartList.length > 0}}"
+    price="{{totalPrice * 100}}"
+    button-text="结算"
+    button-type="primary"
+    bind:submit="onSubmit"
+  />
+</view>

@@ -1,0 +1,7 @@
+.page {
+  padding-bottom: 100rpx;
+}
+
+.empty {
+  padding: 200rpx 0;
+}

@@ -1,0 +1,25 @@
+<view class="page">
+  <van-swipe autoplay="3000" indicator-color="white">
+    <van-swipe-item wx:for="{{bannerList}}" wx:key="index">
+      <image src="{{item}}" mode="widthFix" style="width: 100%;" />
+    </van-swipe-item>
+  </van-swipe>
+
+  <van-grid column-num="4" border="{{false}}">
+    <van-grid-item wx:for="{{categoryList}}" wx:key="name" text="{{item.name}}" icon="{{item.icon}}" />
+  </van-grid>
+
+  <view class="goods-list">
+    <view class="title">推荐鲜花</view>
+    <van-loading wx:if="{{loading}}" type="spinner" size="24px" />
+    <van-card
+      wx:for="{{goodsList}}"
+      wx:key="id"
+      price="{{item.price}}"
+      title="{{item.name}}"
+      thumb="{{item.image}}"
+      data-id="{{item.id}}"
+      bind:click="onGoodsTap"
+    />
+  </view>
+</view>

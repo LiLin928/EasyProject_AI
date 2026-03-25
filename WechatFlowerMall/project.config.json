@@ -1,0 +1,11 @@
+{
+  "name": "wechat-flower-mall",
+  "version": "1.0.0",
+  "description": "微信小程序鲜花商城",
+  "appid": "wx1234567890abcdef",
+  "setting": {
+    "es6": true,
+    "minified": true,
+    "postcss": true
+  }
+}

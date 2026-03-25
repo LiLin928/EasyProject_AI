@@ -1,0 +1,8 @@
+<page path="pages/index/index" />
+<page path="pages/classify/classify" />
+<page path="pages/shopping/shopping" />
+<page path="pages/my/my" />
+<page path="pages/details/details" />
+<page path="pages/order/list" />
+<page path="pages/order/detail" />
+<page path="pages/address/list" />

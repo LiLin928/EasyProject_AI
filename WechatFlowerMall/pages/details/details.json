@@ -1,0 +1,9 @@
+{
+  "usingComponents": {
+    "van-image": "@vant/weapp/image/index",
+    "van-action-bar": "@vant/weapp/action-bar/index",
+    "van-action-bar-icon": "@vant/weapp/action-bar-icon/index",
+    "van-action-bar-button": "@vant/weapp/action-bar-button/index"
+  },
+  "navigationBarTitleText": "商品详情"
+}

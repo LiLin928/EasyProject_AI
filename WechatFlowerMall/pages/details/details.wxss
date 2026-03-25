@@ -1,0 +1,28 @@
+.page {
+  padding-bottom: 100rpx;
+}
+
+.goods-info {
+  padding: 30rpx;
+}
+
+.name {
+  font-size: 36rpx;
+  margin-bottom: 20rpx;
+}
+
+.price {
+  color: #ee0a24;
+  font-size: 48rpx;
+  margin: 20rpx 0;
+}
+
+.symbol {
+  font-size: 28rpx;
+}
+
+.description {
+  font-size: 28rpx;
+  color: #969799;
+  line-height: 1.6;
+}

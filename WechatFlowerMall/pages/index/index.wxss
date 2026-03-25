@@ -1,0 +1,13 @@
+.page {
+  padding-bottom: 20rpx;
+}
+
+.goods-list {
+  padding: 20rpx;
+}
+
+.title {
+  font-size: 32rpx;
+  color: #323233;
+  margin: 20rpx 0;
+}

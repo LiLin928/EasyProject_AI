@@ -1,0 +1,11 @@
+{
+  "usingComponents": {
+    "van-swipe": "@vant/weapp/swipe/index",
+    "van-swipe-item": "@vant/weapp/swipe-item/index",
+    "van-grid": "@vant/weapp/grid/index",
+    "van-grid-item": "@vant/weapp/grid-item/index",
+    "van-card": "@vant/weapp/card/index",
+    "van-loading": "@vant/weapp/loading/index"
+  },
+  "navigationBarTitleText": "鲜花商城"
+}

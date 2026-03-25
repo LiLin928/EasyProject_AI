@@ -1,0 +1,11 @@
+<view class="page">
+  <van-sidebar active-key="{{activeKey}}">
+    <van-sidebar-item wx:for="{{categoryList}}" wx:key="name" title="{{item.name}}" />
+  </van-sidebar>
+
+  <view class="content">
+    <van-grid column-num="2" border="{{false}}">
+      <van-grid-item wx:for="{{categoryList[activeKey].children}}" wx:key="*this" text="{{item}}" icon="flower-o" />
+    </van-grid>
+  </view>
+</view>

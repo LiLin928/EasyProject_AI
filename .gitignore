@@ -1,0 +1,32 @@
+# 构建输出
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+
+# 日志
+logs/
+*.log
+
+# 用户特定文件
+*.user
+*.suo
+
+# IDE
+.vs/
+.idea/
+*.swp
+*.swo
+
+# 环境配置
+.env.local
+appsettings.local.json
+
+# Node.js
+node_modules/
+dist/
+
+# 临时文件
+*.tmp
+*.temp
