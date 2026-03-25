@@ -28,6 +28,7 @@
     <ProjectReference Include="..\BusinessManager\BasicDataManager\BasicDataManager.csproj" />
     <ProjectReference Include="..\BusinessManager\FlowerMallManager\FlowerMallManager.csproj" />
     <ProjectReference Include="..\BusinessManager\SrmManager\SrmManager.csproj" />
+    <ProjectReference Include="..\BusinessManager\WorkflowManager\WorkflowManager.csproj" />
     <ProjectReference Include="..\EasyWechatModels\EasyWechatModels.csproj" />
   </ItemGroup>
 

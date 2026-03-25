@@ -341,4 +341,30 @@ namespace EasyWechatModels.Dto
     }
 
     #endregion
+
+    #region 工作流
+
+    public class WorkflowDefinitionRes
+    {
+        public long Id { get; set; }
+        public string Code { get; set; }
+        public string Name { get; set; }
+        public string Version { get; set; }
+        public int Status { get; set; }
+        public string StatusText { get; set; }
+        public string Config { get; set; }
+        public DateTime CreateTime { get; set; }
+    }
+
+    public class WorkflowDefinitionReq
+    {
+        public long? Id { get; set; }
+        public string Code { get; set; }
+        public string Name { get; set; }
+        public string Version { get; set; }
+        public string Config { get; set; }
+        public int Status { get; set; }
+    }
+
+    #endregion
 }
