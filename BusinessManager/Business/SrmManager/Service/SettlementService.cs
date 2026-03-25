@@ -33,9 +33,11 @@ namespace BusinessManager.Business.SrmManager.Service
 
         public async Task<string> CreateAsync(SrmSettlement settlement)
         {
+            settlement.Id = Guid.NewGuid().ToString("N");
             settlement.SettlementNo = "SET" + DateTime.Now.ToString("yyyyMMddHHmmss") + new Random().Next(1000, 9999);
             settlement.CreateTime = DateTime.Now;
-            return await _db.Insertable(settlement).ExecuteReturnIdentityAsync();
+            await _db.Insertable(settlement).ExecuteCommandAsync();
+            return settlement.Id;
         }
 
         public async Task<bool> CompleteAsync(string id)

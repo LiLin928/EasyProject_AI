@@ -34,9 +34,11 @@ namespace BusinessManager.Business.SrmManager.Service
         public async Task<string> CreateAsync(SrmInvoiceReq req)
         {
             var entity = req.Adapt<SrmInvoice>();
+            entity.Id = Guid.NewGuid().ToString("N");
             entity.Status = 1;
             entity.CreateTime = DateTime.Now;
-            return await _db.Insertable(entity).ExecuteReturnIdentityAsync();
+            await _db.Insertable(entity).ExecuteCommandAsync();
+            return entity.Id;
         }
 
         public async Task<bool> UpdateAsync(SrmInvoiceReq req)

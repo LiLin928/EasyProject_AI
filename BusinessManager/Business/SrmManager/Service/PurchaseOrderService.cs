@@ -89,6 +89,7 @@ namespace BusinessManager.Business.SrmManager.Service
             {
                 var order = new SrmPurchaseOrder
                 {
+                    Id = Guid.NewGuid().ToString("N"),
                     OrderNo = "PO" + DateTime.Now.ToString("yyyyMMddHHmmss") + new Random().Next(1000, 9999),
                     RequestId = req.RequestId,
                     SupplierId = req.SupplierId,
@@ -99,7 +100,7 @@ namespace BusinessManager.Business.SrmManager.Service
                     CreateTime = DateTime.Now
                 };
 
-                var orderId = await _db.Insertable(order).ExecuteReturnIdentityAsync();
+                await _db.Insertable(order).ExecuteCommandAsync();
 
                 decimal totalAmount = 0;
                 foreach (var item in req.Items)
@@ -109,7 +110,8 @@ namespace BusinessManager.Business.SrmManager.Service
 
                     var orderItem = new SrmPurchaseOrderItem
                     {
-                        OrderId = orderId.ToString(),
+                        Id = Guid.NewGuid().ToString("N"),
+                        OrderId = order.Id,
                         GoodsId = item.GoodsId,
                         GoodsName = item.GoodsName,
                         Specification = item.Specification,
@@ -125,11 +127,11 @@ namespace BusinessManager.Business.SrmManager.Service
                 order.TotalAmount = totalAmount;
                 await _db.Updateable(order)
                     .SetColumns(o => o.TotalAmount, totalAmount)
-                    .Where(o => o.Id == orderId.ToString())
+                    .Where(o => o.Id == order.Id)
                     .ExecuteCommandAsync();
 
                 _db.Ado.CommitTran();
-                return orderId != null ? long.Parse(orderId) : 0;
+                return order.Id;
             }
             catch
             {

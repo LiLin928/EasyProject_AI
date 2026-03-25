@@ -1,4 +1,3 @@
-using BusinessManager.BasicDataManager.IService;
 using CommonManager.Base;
 using EasyWechatModels.Dto;
 using EasyWechatModels.Entitys;
@@ -11,14 +10,9 @@ using System.Threading.Tasks;
 
 namespace BusinessManager.BasicDataManager.Service
 {
-    /// <summary>
-    /// 角色服务实现（集成 BaseService）
-    /// </summary>
-    public class RoleService : BaseService<BaseRole>, IRoleService
+    public class RoleService : BaseService<BaseRole>, BusinessManager.BasicDataManager.IService.IRoleService
     {
-        public RoleService(ISqlSugarClient db) : base(db)
-        {
-        }
+        public RoleService(ISqlSugarClient db) : base(db) { }
 
         public async Task<PageResponse<BaseRoleRes>> GetPageDataAsync(int pageIndex, int pageSize, string keyword = null)
         {
@@ -27,12 +21,10 @@ namespace BusinessManager.BasicDataManager.Service
                 .OrderByDescending(r => r.CreateTime);
 
             var list = await query.ToPageListAsync(pageIndex, pageSize);
-            var totalCount = list.Count;
-
-            return PageResponse<BaseRoleRes>.Create(list.Adapt<List<BaseRoleRes>>(), totalCount, pageIndex, pageSize);
+            return PageResponse<BaseRoleRes>.Create(list.Adapt<List<BaseRoleRes>>(), list.Count, pageIndex, pageSize);
         }
 
-        public async Task<BaseRoleRes> GetByIdAsync(long id)
+        public async Task<BaseRoleRes> GetByIdAsync(string id)
         {
             var role = await _db.Queryable<BaseRole>().Where(r => r.Id == id).FirstAsync();
             return role?.Adapt<BaseRoleRes>();
@@ -41,18 +33,19 @@ namespace BusinessManager.BasicDataManager.Service
         public async Task<string> CreateAsync(BaseRoleReq req)
         {
             var entity = req.Adapt<BaseRole>();
+            entity.Id = Guid.NewGuid().ToString("N");
             entity.CreateTime = DateTime.Now;
-            return await _db.Insertable(entity).ExecuteReturnIdentityAsync();
+            await _db.Insertable(entity).ExecuteCommandAsync();
+            return entity.Id;
         }
 
         public async Task<bool> UpdateAsync(BaseRoleReq req)
         {
             var entity = req.Adapt<BaseRole>();
-            entity.UpdateTime = DateTime.Now;
             return await _db.Updateable(entity).ExecuteCommandHasChangeAsync();
         }
 
-        public async Task<bool> DeleteAsync(long id)
+        public async Task<bool> DeleteAsync(string id)
         {
             return await _db.Deleteable<BaseRole>().Where(r => r.Id == id).ExecuteCommandHasChangeAsync();
         }

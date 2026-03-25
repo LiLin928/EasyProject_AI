@@ -24,18 +24,20 @@ namespace BusinessManager.WorkflowManager.Service
             return PageResponse<WorkflowDefinitionRes>.Create(list.Adapt<List<WorkflowDefinitionRes>>(), list.Count, pageIndex, pageSize);
         }
 
-        public async Task<WorkflowDefinitionRes> GetByIdAsync(long id)
+        public async Task<WorkflowDefinitionRes> GetByIdAsync(string id)
         {
             var workflow = await _db.Queryable<WorkflowDefinition>().Where(w => w.Id == id).FirstAsync();
             return workflow?.Adapt<WorkflowDefinitionRes>();
         }
 
-        public async Task<long> CreateAsync(WorkflowDefinitionReq req)
+        public async Task<string> CreateAsync(WorkflowDefinitionReq req)
         {
             var entity = req.Adapt<WorkflowDefinition>();
+            entity.Id = Guid.NewGuid().ToString("N");
             entity.Status = 0;
             entity.CreateTime = DateTime.Now;
-            return await _db.Insertable(entity).ExecuteReturnIdentityAsync();
+            await _db.Insertable(entity).ExecuteCommandAsync();
+            return entity.Id;
         }
 
         public async Task<bool> UpdateAsync(WorkflowDefinitionReq req)
@@ -49,7 +51,7 @@ namespace BusinessManager.WorkflowManager.Service
             return await _db.Deleteable<WorkflowDefinition>().Where(w => w.Id == id).ExecuteCommandHasChangeAsync();
         }
 
-        public async Task<bool> PublishAsync(long id)
+        public async Task<bool> PublishAsync(string id)
         {
             return await _db.Updateable<WorkflowDefinition>()
                 .SetColumns(w => w.Status, 1)

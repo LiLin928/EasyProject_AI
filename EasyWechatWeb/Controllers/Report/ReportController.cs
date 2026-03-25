@@ -39,7 +39,8 @@ namespace EasyWechatWeb.Controllers.Report
                     .OrderByDescending(r => r.CreateTime);
 
                 var list = await query.ToPageListAsync(pageIndex, pageSize);
-                return Success(PageResponse<RptReportRes>.Create(list.Adapt<List<RptReportRes>>(), list.Count, pageIndex, pageSize));
+                var resList = list.Adapt<List<RptReportRes>>();
+                return Success(PageResponse<RptReportRes>.Create(resList, list.Count, pageIndex, pageSize));
             }
             catch (System.Exception ex)
             {

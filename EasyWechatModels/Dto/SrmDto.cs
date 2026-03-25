@@ -275,4 +275,85 @@ namespace EasyWechatModels.Dto
     }
 
     #endregion
+
+    #region ETL
+
+    public class EtlTaskRes
+    {
+        public string Id { get; set; }
+        public string TaskCode { get; set; }
+        public string TaskName { get; set; }
+        public string SourceType { get; set; }
+        public string TargetType { get; set; }
+        public string Schedule { get; set; }
+        public int? Status { get; set; }
+        public DateTime? LastRunTime { get; set; }
+        public int? LastRunStatus { get; set; }
+        public DateTime? CreateTime { get; set; }
+    }
+
+    public class EtlTaskReq
+    {
+        public string? Id { get; set; }
+        public string TaskCode { get; set; }
+        public string TaskName { get; set; }
+        public string SourceType { get; set; }
+        public string TargetType { get; set; }
+        public string Schedule { get; set; }
+        public int? Status { get; set; } = 1;
+    }
+
+    #endregion
+
+    #region 报表
+
+    public class RptReportRes
+    {
+        public string Id { get; set; }
+        public string ReportCode { get; set; }
+        public string ReportName { get; set; }
+        public string ReportType { get; set; }
+        public int? Status { get; set; }
+        public DateTime? CreateTime { get; set; }
+    }
+
+    #endregion
+
+    #region 大屏
+
+    public class ScreenProjectRes
+    {
+        public string Id { get; set; }
+        public string ProjectCode { get; set; }
+        public string ProjectName { get; set; }
+        public int? Status { get; set; }
+        public DateTime? CreateTime { get; set; }
+    }
+
+    #endregion
+
+    #region 系统配置
+
+    public class SysConfigRes
+    {
+        public string Id { get; set; }
+        public string ConfigKey { get; set; }
+        public string ConfigValue { get; set; }
+        public string ConfigType { get; set; }
+        public string Description { get; set; }
+        public int? Status { get; set; }
+        public DateTime? CreateTime { get; set; }
+    }
+
+    public class SysConfigReq
+    {
+        public string? Id { get; set; }
+        public string ConfigKey { get; set; }
+        public string ConfigValue { get; set; }
+        public string ConfigType { get; set; }
+        public string Description { get; set; }
+        public int? Status { get; set; } = 1;
+    }
+
+    #endregion
 }

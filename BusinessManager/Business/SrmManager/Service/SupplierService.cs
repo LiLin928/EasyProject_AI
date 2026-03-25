@@ -33,8 +33,10 @@ namespace BusinessManager.Business.SrmManager.Service
         public async Task<string> CreateAsync(SrmSupplierReq req)
         {
             var entity = req.Adapt<SrmSupplier>();
+            entity.Id = Guid.NewGuid().ToString("N");
             entity.CreateTime = DateTime.Now;
-            return await _db.Insertable(entity).ExecuteReturnIdentityAsync();
+            await _db.Insertable(entity).ExecuteCommandAsync();
+            return entity.Id;
         }
 
         public async Task<bool> UpdateAsync(SrmSupplierReq req)

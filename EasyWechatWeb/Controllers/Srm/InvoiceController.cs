@@ -1,6 +1,7 @@
-using BusinessManager.SrmManager.IService;
+using BusinessManager.Business.SrmManager.IService;
 using CommonManager.Base;
 using EasyWechatModels.Dto;
+using EasyWechatModels.Entitys;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -40,7 +41,7 @@ namespace EasyWechatWeb.Controllers.Srm
         }
 
         [HttpGet("detail")]
-        public async Task<ApiResponse<SrmInvoiceRes>> GetDetail([FromQuery] long id)
+        public async Task<ApiResponse<SrmInvoiceRes>> GetDetail([FromQuery] string id)
         {
             try
             {
@@ -55,7 +56,7 @@ namespace EasyWechatWeb.Controllers.Srm
         }
 
         [HttpPost("create")]
-        public async Task<ApiResponse<long>> Create([FromBody] SrmInvoiceReq req)
+        public async Task<ApiResponse<string>> Create([FromBody] SrmInvoiceReq req)
         {
             try
             {
@@ -65,42 +66,12 @@ namespace EasyWechatWeb.Controllers.Srm
             catch (System.Exception ex)
             {
                 _logger.LogError(ex, "创建发票失败");
-                return Error<long>(ex.Message);
-            }
-        }
-
-        [HttpPost("update")]
-        public async Task<ApiResponse<bool>> Update([FromBody] SrmInvoiceReq req)
-        {
-            try
-            {
-                var result = await _service.UpdateAsync(req);
-                return Success(result, "更新成功");
-            }
-            catch (System.Exception ex)
-            {
-                _logger.LogError(ex, "更新发票失败");
-                return Error<bool>(ex.Message);
-            }
-        }
-
-        [HttpPost("delete")]
-        public async Task<ApiResponse<bool>> Delete([FromQuery] long id)
-        {
-            try
-            {
-                var result = await _service.DeleteAsync(id);
-                return Success(result, "删除成功");
-            }
-            catch (System.Exception ex)
-            {
-                _logger.LogError(ex, "删除发票失败");
-                return Error<bool>(ex.Message);
+                return Error<string>(ex.Message);
             }
         }
 
         [HttpPost("audit")]
-        public async Task<ApiResponse<bool>> Audit([FromQuery] long id, [FromQuery] bool approved)
+        public async Task<ApiResponse<bool>> Audit([FromQuery] string id, [FromQuery] bool approved)
         {
             try
             {

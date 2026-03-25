@@ -1,6 +1,5 @@
 using BusinessManager.FlowerMallManager.IService;
 using CommonManager.Base;
-using CommonManager.Base;
 using EasyWechatModels.Dto;
 using EasyWechatModels.Entitys;
 using Mapster;
@@ -14,49 +13,43 @@ namespace BusinessManager.FlowerMallManager.Service
 {
     public class GoodsService : BaseService<MallGoods>, IGoodsService
     {
-        public GoodsService(ISqlSugarClient db) : base(db)
-        {
-        }
+        public GoodsService(ISqlSugarClient db) : base(db) { }
 
         public async Task<PageResponse<MallGoodsRes>> GetPageDataAsync(int pageIndex, int pageSize, int? categoryId = null, string keyword = null)
         {
             var query = _db.Queryable<MallGoods>()
-                .Where(g => g.Status == 1)
-                .WhereIF(categoryId.HasValue, g => g.CategoryId == categoryId.Value)
+                .WhereIF(categoryId.HasValue, g => g.CategoryId == categoryId.ToString())
                 .WhereIF(!string.IsNullOrEmpty(keyword), g => g.Name.Contains(keyword))
-                .OrderByDescending(g => g.Sort)
-                .OrderByDescending(g => g.CreateTime);
+                .OrderByDescending(g => g.Sort);
 
             var list = await query.ToPageListAsync(pageIndex, pageSize);
             return PageResponse<MallGoodsRes>.Create(list.Adapt<List<MallGoodsRes>>(), list.Count, pageIndex, pageSize);
         }
 
-        public async Task<MallGoodsRes> GetByIdAsync(long id)
+        public async Task<MallGoodsRes> GetByIdAsync(string id)
         {
             var goods = await _db.Queryable<MallGoods>().Where(g => g.Id == id).FirstAsync();
             return goods?.Adapt<MallGoodsRes>();
         }
 
-        public async Task<long> CreateAsync(MallGoodsReq req)
+        public async Task<string> CreateAsync(MallGoodsReq req)
         {
             var entity = req.Adapt<MallGoods>();
+            entity.Id = Guid.NewGuid().ToString("N");
             entity.CreateTime = DateTime.Now;
-            return await _db.Insertable(entity).ExecuteReturnIdentityAsync();
+            await _db.Insertable(entity).ExecuteCommandAsync();
+            return entity.Id;
         }
 
         public async Task<bool> UpdateAsync(MallGoodsReq req)
         {
             var entity = req.Adapt<MallGoods>();
-            entity.UpdateTime = DateTime.Now;
             return await _db.Updateable(entity).ExecuteCommandHasChangeAsync();
         }
 
-        public async Task<bool> DeleteAsync(long id)
+        public async Task<bool> DeleteAsync(string id)
         {
-            return await _db.Updateable<MallGoods>()
-                .SetColumns(g => g.Status == 0)
-                .Where(g => g.Id == id)
-                .ExecuteCommandHasChangeAsync();
+            return await _db.Deleteable<MallGoods>().Where(g => g.Id == id).ExecuteCommandHasChangeAsync();
         }
     }
 }

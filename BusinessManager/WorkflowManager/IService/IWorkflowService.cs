@@ -7,10 +7,10 @@ namespace BusinessManager.WorkflowManager.IService
     public interface IWorkflowService
     {
         Task<PageResponse<WorkflowDefinitionRes>> GetPageDataAsync(int pageIndex, int pageSize, string keyword = null);
-        Task<WorkflowDefinitionRes> GetByIdAsync(long id);
-        Task<long> CreateAsync(WorkflowDefinitionReq req);
+        Task<WorkflowDefinitionRes> GetByIdAsync(string id);
+        Task<string> CreateAsync(WorkflowDefinitionReq req);
         Task<bool> UpdateAsync(WorkflowDefinitionReq req);
-        Task<bool> DeleteAsync(long id);
-        Task<bool> PublishAsync(long id);
+        Task<bool> DeleteAsync(string id);
+        Task<bool> PublishAsync(string id);
     }
 }

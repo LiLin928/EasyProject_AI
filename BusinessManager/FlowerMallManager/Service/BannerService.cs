@@ -1,27 +1,26 @@
-using BusinessManager.FlowerMallManager.IService;
-using CommonManager.Base;
 using EasyWechatModels.Dto;
 using EasyWechatModels.Entitys;
 using Mapster;
 using SqlSugar;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace BusinessManager.FlowerMallManager.Service
 {
-    /// <summary>
-    /// 轮播图服务实现（集成 BaseService）
-    /// </summary>
-    public class BannerService : BaseService<MallBanner>, IBannerService
+    public class BannerService : BusinessManager.FlowerMallManager.IService.IBannerService
     {
-        public BannerService(ISqlSugarClient db) : base(db)
+        private readonly ISqlSugarClient _db;
+
+        public BannerService(ISqlSugarClient db)
         {
+            _db = db;
         }
 
         public async Task<List<MallBannerRes>> GetListAsync()
         {
-            var list = await _db.Queryable<MallBanner>()
+            var list = await _db.Queryable<EasyWechatModels.Entitys.MallBanner>()
                 .Where(b => b.Status == 1)
                 .OrderBy(b => b.Sort)
                 .ToListAsync();

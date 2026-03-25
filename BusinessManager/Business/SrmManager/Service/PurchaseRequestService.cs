@@ -87,6 +87,7 @@ namespace BusinessManager.Business.SrmManager.Service
             {
                 var request = new SrmPurchaseRequest
                 {
+                    Id = Guid.NewGuid().ToString("N"),
                     RequestNo = "PR" + DateTime.Now.ToString("yyyyMMddHHmmss") + new Random().Next(1000, 9999),
                     ApplicantId = userId,
                     DepartmentId = req.DepartmentId,
@@ -97,8 +98,7 @@ namespace BusinessManager.Business.SrmManager.Service
                     CreateTime = DateTime.Now
                 };
 
-                var requestId = await _db.Insertable(request).ExecuteReturnIdentityAsync();
-                if (requestId == null) requestId = Guid.NewGuid().ToString("N");
+                await _db.Insertable(request).ExecuteCommandAsync();
 
                 decimal totalAmount = 0;
                 foreach (var item in req.Items)
@@ -108,7 +108,8 @@ namespace BusinessManager.Business.SrmManager.Service
 
                     var requestItem = new SrmPurchaseRequestItem
                     {
-                        RequestId = requestId,
+                        Id = Guid.NewGuid().ToString("N"),
+                        RequestId = request.Id,
                         GoodsId = item.GoodsId,
                         GoodsName = item.GoodsName,
                         Specification = item.Specification,
@@ -124,11 +125,11 @@ namespace BusinessManager.Business.SrmManager.Service
                 request.TotalAmount = totalAmount;
                 await _db.Updateable(request)
                     .SetColumns(r => r.TotalAmount, totalAmount)
-                    .Where(r => r.Id == requestId)
+                    .Where(r => r.Id == request.Id)
                     .ExecuteCommandAsync();
 
                 _db.Ado.CommitTran();
-                return requestId;
+                return request.Id;
             }
             catch
             {
@@ -159,6 +160,7 @@ namespace BusinessManager.Business.SrmManager.Service
 
                     var requestItem = new SrmPurchaseRequestItem
                     {
+                        Id = Guid.NewGuid().ToString("N"),
                         RequestId = request.Id,
                         GoodsId = item.GoodsId,
                         GoodsName = item.GoodsName,

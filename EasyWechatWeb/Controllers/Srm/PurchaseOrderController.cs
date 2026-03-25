@@ -1,6 +1,7 @@
-using BusinessManager.SrmManager.IService;
+using BusinessManager.Business.SrmManager.IService;
 using CommonManager.Base;
 using EasyWechatModels.Dto;
+using EasyWechatModels.Entitys;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -101,7 +102,7 @@ namespace EasyWechatWeb.Controllers.Srm
         }
 
         [HttpPost("confirm")]
-        public async Task<ApiResponse<bool>> Confirm([FromQuery] long id)
+        public async Task<ApiResponse<bool>> Confirm([FromQuery] string id)
         {
             try
             {
@@ -116,7 +117,7 @@ namespace EasyWechatWeb.Controllers.Srm
         }
 
         [HttpPost("receive")]
-        public async Task<ApiResponse<bool>> Receive([FromQuery] long id)
+        public async Task<ApiResponse<bool>> Receive([FromQuery] string id)
         {
             try
             {

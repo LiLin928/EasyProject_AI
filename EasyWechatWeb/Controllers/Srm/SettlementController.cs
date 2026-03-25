@@ -1,5 +1,4 @@
-using BusinessManager.SrmManager.IService;
-using BusinessManager.SrmManager.Service;
+using BusinessManager.Business.SrmManager.IService;
 using CommonManager.Base;
 using EasyWechatModels.Dto;
 using EasyWechatModels.Entitys;
@@ -42,7 +41,7 @@ namespace EasyWechatWeb.Controllers.Srm
         }
 
         [HttpGet("detail")]
-        public async Task<ApiResponse<SrmSettlementRes>> GetDetail([FromQuery] long id)
+        public async Task<ApiResponse<SrmSettlementRes>> GetDetail([FromQuery] string id)
         {
             try
             {
@@ -57,22 +56,22 @@ namespace EasyWechatWeb.Controllers.Srm
         }
 
         [HttpPost("create")]
-        public async Task<ApiResponse<long>> Create([FromBody] SrmSettlement req)
+        public async Task<ApiResponse<string>> Create([FromBody] SrmSettlementReq req)
         {
             try
             {
-                var id = await _service.CreateAsync(req);
+                var id = await _service.CreateAsync(req.Adapt<SrmSettlement>());
                 return Success(id, "创建成功");
             }
             catch (System.Exception ex)
             {
                 _logger.LogError(ex, "创建结算单失败");
-                return Error<long>(ex.Message);
+                return Error<string>(ex.Message);
             }
         }
 
         [HttpPost("complete")]
-        public async Task<ApiResponse<bool>> Complete([FromQuery] long id)
+        public async Task<ApiResponse<bool>> Complete([FromQuery] string id)
         {
             try
             {

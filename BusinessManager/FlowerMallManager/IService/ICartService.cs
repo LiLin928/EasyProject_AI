@@ -1,3 +1,4 @@
+using CommonManager.Base;
 using EasyWechatModels.Dto;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -6,10 +7,8 @@ namespace BusinessManager.FlowerMallManager.IService
 {
     public interface ICartService
     {
-        Task<List<MallCartRes>> GetListAsync(long userId);
-        Task<long> AddAsync(long userId, MallCartReq req);
-        Task<bool> UpdateAsync(MallCartReq req);
-        Task<bool> DeleteAsync(long userId, long goodsId);
-        Task<bool> ClearAsync(long userId);
+        Task<List<MallCartRes>> GetListAsync(string userId);
+        Task<string> AddAsync(string userId, MallCartReq req);
+        Task<bool> DeleteAsync(string userId, string goodsId);
     }
 }

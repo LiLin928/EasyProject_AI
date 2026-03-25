@@ -31,7 +31,7 @@ namespace BusinessManager.BasicDataManager.Service
             return PageResponse<BaseUsersRes>.Create(list.Adapt<List<BaseUsersRes>>(), list.Count, pageIndex, pageSize);
         }
 
-        public async Task<BaseUsersRes> GetByIdAsync(long id)
+        public async Task<BaseUsersRes> GetByIdAsync(string id)
         {
             var user = await _db.Queryable<BaseUsers>().Where(u => u.Id == id).FirstAsync();
             return user?.Adapt<BaseUsersRes>();
@@ -40,9 +40,11 @@ namespace BusinessManager.BasicDataManager.Service
         public async Task<string> CreateAsync(BaseUsersReq req)
         {
             var entity = req.Adapt<BaseUsers>();
+            entity.Id = Guid.NewGuid().ToString("N");
             entity.Password = SecurityHelper.HashMD5(req.Password);
             entity.CreateTime = DateTime.Now;
-            return await _db.Insertable(entity).ExecuteReturnIdentityAsync();
+            await _db.Insertable(entity).ExecuteCommandAsync();
+            return entity.Id;
         }
 
         public async Task<bool> UpdateAsync(BaseUsersReq req)
@@ -63,7 +65,7 @@ namespace BusinessManager.BasicDataManager.Service
             }
         }
 
-        public async Task<bool> DeleteAsync(long id)
+        public async Task<bool> DeleteAsync(string id)
         {
             return await _db.Deleteable<BaseUsers>().Where(u => u.Id == id).ExecuteCommandHasChangeAsync();
         }
@@ -91,7 +93,7 @@ namespace BusinessManager.BasicDataManager.Service
             return user.Adapt<BaseUsersRes>();
         }
 
-        public async Task<bool> ChangePasswordAsync(long userId, string oldPassword, string newPassword)
+        public async Task<bool> ChangePasswordAsync(string userId, string oldPassword, string newPassword)
         {
             var user = await GetByIdAsync(userId);
             if (user == null)

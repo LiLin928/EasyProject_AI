@@ -34,11 +34,13 @@ namespace BusinessManager.Business.SrmManager.Service
         public async Task<string> CreateAsync(string userId, SrmPaymentRequestReq req)
         {
             var entity = req.Adapt<SrmPaymentRequest>();
+            entity.Id = Guid.NewGuid().ToString("N");
             entity.RequestNo = "PAY" + DateTime.Now.ToString("yyyyMMddHHmmss") + new Random().Next(1000, 9999);
             entity.Status = 1;
             entity.RequestDate = DateTime.Now;
             entity.CreateTime = DateTime.Now;
-            return await _db.Insertable(entity).ExecuteReturnIdentityAsync();
+            await _db.Insertable(entity).ExecuteCommandAsync();
+            return entity.Id;
         }
 
         public async Task<bool> ApproveAsync(string id, bool approved)

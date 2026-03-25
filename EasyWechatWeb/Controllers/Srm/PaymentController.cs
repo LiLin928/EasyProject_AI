@@ -1,7 +1,7 @@
-using BusinessManager.SrmManager.IService;
-using BusinessManager.SrmManager.Service;
+using BusinessManager.Business.SrmManager.IService;
 using CommonManager.Base;
 using EasyWechatModels.Dto;
+using EasyWechatModels.Entitys;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -41,7 +41,7 @@ namespace EasyWechatWeb.Controllers.Srm
         }
 
         [HttpGet("detail")]
-        public async Task<ApiResponse<SrmPaymentRequestRes>> GetDetail([FromQuery] long id)
+        public async Task<ApiResponse<SrmPaymentRequestRes>> GetDetail([FromQuery] string id)
         {
             try
             {
@@ -56,23 +56,23 @@ namespace EasyWechatWeb.Controllers.Srm
         }
 
         [HttpPost("create")]
-        public async Task<ApiResponse<long>> Create([FromBody] SrmPaymentRequestReq req)
+        public async Task<ApiResponse<string>> Create([FromBody] SrmPaymentRequestReq req)
         {
             try
             {
-                var userId = long.Parse(GetCurrentUserId() ?? "0");
+                var userId = GetCurrentUserId() ?? string.Empty;
                 var id = await _service.CreateAsync(userId, req);
                 return Success(id, "创建成功");
             }
             catch (System.Exception ex)
             {
                 _logger.LogError(ex, "创建付款申请失败");
-                return Error<long>(ex.Message);
+                return Error<string>(ex.Message);
             }
         }
 
         [HttpPost("approve")]
-        public async Task<ApiResponse<bool>> Approve([FromQuery] long id, [FromQuery] bool approved)
+        public async Task<ApiResponse<bool>> Approve([FromQuery] string id, [FromQuery] bool approved)
         {
             try
             {
@@ -87,7 +87,7 @@ namespace EasyWechatWeb.Controllers.Srm
         }
 
         [HttpPost("pay")]
-        public async Task<ApiResponse<bool>> Pay([FromQuery] long id)
+        public async Task<ApiResponse<bool>> Pay([FromQuery] string id)
         {
             try
             {

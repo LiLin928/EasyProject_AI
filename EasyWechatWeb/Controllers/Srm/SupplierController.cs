@@ -1,6 +1,7 @@
-using BusinessManager.SrmManager.IService;
+using BusinessManager.Business.SrmManager.IService;
 using CommonManager.Base;
 using EasyWechatModels.Dto;
+using EasyWechatModels.Entitys;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

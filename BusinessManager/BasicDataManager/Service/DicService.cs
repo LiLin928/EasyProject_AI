@@ -1,4 +1,3 @@
-using BusinessManager.BasicDataManager.IService;
 using CommonManager.Base;
 using EasyWechatModels.Dto;
 using EasyWechatModels.Entitys;
@@ -11,14 +10,9 @@ using System.Threading.Tasks;
 
 namespace BusinessManager.BasicDataManager.Service
 {
-    /// <summary>
-    /// 字典服务实现（集成 BaseService）
-    /// </summary>
-    public class DicService : BaseService<BaseDic>, IDicService
+    public class DicService : BaseService<BaseDic>, BusinessManager.BasicDataManager.IService.IDicService
     {
-        public DicService(ISqlSugarClient db) : base(db)
-        {
-        }
+        public DicService(ISqlSugarClient db) : base(db) { }
 
         public async Task<PageResponse<BaseDicRes>> GetPageDataAsync(int pageIndex, int pageSize, string keyword = null)
         {
@@ -30,7 +24,7 @@ namespace BusinessManager.BasicDataManager.Service
             return PageResponse<BaseDicRes>.Create(list.Adapt<List<BaseDicRes>>(), list.Count, pageIndex, pageSize);
         }
 
-        public async Task<BaseDicRes> GetByIdAsync(long id)
+        public async Task<BaseDicRes> GetByIdAsync(string id)
         {
             var dic = await _db.Queryable<BaseDic>().Where(d => d.Id == id).FirstAsync();
             return dic?.Adapt<BaseDicRes>();
@@ -39,8 +33,10 @@ namespace BusinessManager.BasicDataManager.Service
         public async Task<string> CreateAsync(BaseDicReq req)
         {
             var entity = req.Adapt<BaseDic>();
+            entity.Id = Guid.NewGuid().ToString("N");
             entity.CreateTime = DateTime.Now;
-            return await _db.Insertable(entity).ExecuteReturnIdentityAsync();
+            await _db.Insertable(entity).ExecuteCommandAsync();
+            return entity.Id;
         }
 
         public async Task<bool> UpdateAsync(BaseDicReq req)
@@ -49,7 +45,7 @@ namespace BusinessManager.BasicDataManager.Service
             return await _db.Updateable(entity).ExecuteCommandHasChangeAsync();
         }
 
-        public async Task<bool> DeleteAsync(long id)
+        public async Task<bool> DeleteAsync(string id)
         {
             return await _db.Deleteable<BaseDic>().Where(d => d.Id == id).ExecuteCommandHasChangeAsync();
         }
