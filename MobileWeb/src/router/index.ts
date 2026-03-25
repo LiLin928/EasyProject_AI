@@ -56,6 +56,30 @@ const routes: RouteRecordRaw[] = [
     name: 'OrderDetail',
     component: () => import('@/views/order/Detail.vue'),
     meta: { title: '订单详情' }
+  },
+  {
+    path: '/search',
+    name: 'Search',
+    component: () => import('@/views/home/Search.vue'),
+    meta: { title: '搜索' }
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: () => import('@/views/user/Register.vue'),
+    meta: { title: '注册' }
+  },
+  {
+    path: '/address/list',
+    name: 'AddressList',
+    component: () => import('@/views/address/List.vue'),
+    meta: { title: '地址管理' }
+  },
+  {
+    path: '/address/edit',
+    name: 'AddressEdit',
+    component: () => import('@/views/address/Edit.vue'),
+    meta: { title: '编辑地址' }
   }
 ]
 

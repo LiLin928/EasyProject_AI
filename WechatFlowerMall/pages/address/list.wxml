@@ -1,0 +1,9 @@
+<view class="page">
+  <van-address-list
+    list="{{addressList}}"
+    default-tag-text="默认"
+    bind:add="onAdd"
+    bind:edit="onEdit"
+    bind:select="onSelect"
+  />
+</view>

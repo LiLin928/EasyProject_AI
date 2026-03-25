@@ -1,0 +1,12 @@
+<view class="page">
+  <van-address-edit
+    area-list="/area-list.json"
+    show-postal
+    show-set-default
+    show-search-result
+    :search-result="searchResult"
+    :area-columns-placeholder="['请选择', '请选择', '请选择']"
+    bind:save="onSave"
+    bind:delete="onDelete"
+  />
+</view>

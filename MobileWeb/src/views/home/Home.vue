@@ -52,6 +52,12 @@ onMounted(async () => {
   }
 })
 
+const keyword = ref('')
+
+const goSearch = () => {
+  router.push(`/search?keyword=${keyword.value}`)
+}
+
 const goDetail = (id: number) => {
   router.push(`/goods/${id}`)
 }

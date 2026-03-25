@@ -1,0 +1,27 @@
+<view class="page">
+  <van-tabs active="{{active}}" bind:change="onChange">
+    <van-tab title="全部" />
+    <van-tab title="待付款" />
+    <van-tab title="待发货" />
+    <van-tab title="待收货" />
+    <van-tab title="已完成" />
+  </van-tabs>
+
+  <van-list v-model:loading="{{loading}}" :finished="{{finished}}" finished-text="没有更多了" @load="loadOrderList">
+    <van-card
+      wx:for="{{orderList}}"
+      wx:key="id"
+      price="{{item.totalAmount}}"
+      title="{{item.orderNo}}"
+      thumb="https://via.placeholder.com/100x100"
+      data-id="{{item.id}}"
+      bind:click="onDetail"
+    >
+      <template #tags>
+        <van-tag plain type="{{item.status === 0 ? 'warning' : 'success'}}">{{item.statusText}}</van-tag>
+      </template>
+    </van-card>
+  </van-list>
+
+  <van-empty wx:if="{{orderList.length === 0}}" description="暂无订单" />
+</view>

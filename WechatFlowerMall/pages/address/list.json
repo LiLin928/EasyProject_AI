@@ -1,0 +1,6 @@
+{
+  "usingComponents": {
+    "van-address-list": "@vant/weapp/address-list/index"
+  },
+  "navigationBarTitleText": "地址管理"
+}
