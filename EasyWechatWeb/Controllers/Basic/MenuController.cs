@@ -115,14 +115,14 @@ namespace EasyWechatWeb.Controllers.Basic
             {
                 tree.Add(new
                 {
-                    item.Id,
-                    item.MenuName,
-                    item.MenuType,
-                    item.Path,
-                    item.Component,
-                    item.Icon,
-                    item.Sort,
-                    children = BuildTree(list, item.Id)
+                    Id = item.Id,
+                    MenuName = item.MenuName,
+                    MenuType = item.MenuType,
+                    Path = item.Path,
+                    Component = item.Component,
+                    Icon = item.Icon,
+                    Sort = item.Sort,
+                    Children = BuildTree(list, item.Id)
                 });
             }
 

@@ -85,7 +85,7 @@ namespace EasyWechatWeb.Controllers.Srm
         }
 
         [HttpPost("delete")]
-        public async Task<ApiResponse<bool>> Delete([FromQuery] long id)
+        public async Task<ApiResponse<bool>> Delete([FromQuery] string id)
         {
             try
             {

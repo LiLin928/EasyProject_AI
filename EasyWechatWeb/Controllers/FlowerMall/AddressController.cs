@@ -100,13 +100,25 @@ namespace EasyWechatWeb.Controllers.FlowerMall
         }
 
         [HttpPost("setDefault")]
-        public async Task<ApiResponse<bool>> SetDefault([FromQuery] long id)
+        public async Task<ApiResponse<bool>> SetDefault([FromQuery] string id)
         {
             try
             {
-                var userId = long.Parse(GetCurrentUserId() ?? "0");
-                var result = await _addressService.SetDefaultAsync(userId, id);
-                return Success(result, "设置成功");
+                // 简化实现：直接更新
+                var address = await _addressService.GetByIdAsync(id);
+                if (address == null) return Error<bool>("地址不存在", 404);
+                
+                var userId = GetCurrentUserId() ?? string.Empty;
+                // 先将该用户所有地址设为非默认
+                var allAddresses = await _addressService.GetPageDataAsync(1, 100, userId);
+                foreach (var addr in allAddresses.Data?.List ?? new List<MallAddressRes>())
+                {
+                    var updateReq = addr.Adapt<MallAddressReq>();
+                    updateReq.IsDefault = (addr.Id == id) ? 1 : 0;
+                    await _addressService.UpdateAsync(updateReq);
+                }
+                
+                return Success(true, "设置成功");
             }
             catch (System.Exception ex)
             {

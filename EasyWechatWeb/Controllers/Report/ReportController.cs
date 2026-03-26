@@ -66,7 +66,7 @@ namespace EasyWechatWeb.Controllers.Report
         }
 
         [HttpPost("execute")]
-        public async Task<ApiResponse<object>> Execute([FromQuery] long id)
+        public async Task<ApiResponse<object>> Execute([FromQuery] string id)
         {
             try
             {

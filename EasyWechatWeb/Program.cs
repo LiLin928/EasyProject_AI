@@ -107,12 +107,13 @@ builder.Services.AddScoped<BusinessManager.FlowerMallManager.IService.ICartServi
 builder.Services.AddScoped<BusinessManager.FlowerMallManager.IService.IOrderService, BusinessManager.FlowerMallManager.Service.OrderService>();
 builder.Services.AddScoped<BusinessManager.FlowerMallManager.IService.IAddressService, BusinessManager.FlowerMallManager.Service.AddressService>();
 builder.Services.AddScoped<BusinessManager.FlowerMallManager.IService.IBannerService, BusinessManager.FlowerMallManager.Service.BannerService>();
-builder.Services.AddScoped<BusinessManager.SrmManager.IService.IPurchaseRequestService, BusinessManager.SrmManager.Service.PurchaseRequestService>();
-builder.Services.AddScoped<BusinessManager.SrmManager.IService.ISupplierService, BusinessManager.SrmManager.Service.SupplierService>();
-builder.Services.AddScoped<BusinessManager.SrmManager.IService.IPurchaseOrderService, BusinessManager.SrmManager.Service.PurchaseOrderService>();
-builder.Services.AddScoped<BusinessManager.SrmManager.IService.IInvoiceService, BusinessManager.SrmManager.Service.InvoiceService>();
+builder.Services.AddScoped<BusinessManager.Business.SrmManager.IService.IPurchaseRequestService, BusinessManager.Business.SrmManager.Service.PurchaseRequestService>();
+builder.Services.AddScoped<BusinessManager.Business.SrmManager.IService.ISupplierService, BusinessManager.Business.SrmManager.Service.SupplierService>();
+builder.Services.AddScoped<BusinessManager.Business.SrmManager.IService.IPurchaseOrderService, BusinessManager.Business.SrmManager.Service.PurchaseOrderService>();
+builder.Services.AddScoped<BusinessManager.Business.SrmManager.IService.IInvoiceService, BusinessManager.Business.SrmManager.Service.InvoiceService>();
 builder.Services.AddScoped<BusinessManager.Business.SrmManager.IService.IPaymentService, BusinessManager.Business.SrmManager.Service.PaymentService>();
 builder.Services.AddScoped<BusinessManager.Business.SrmManager.IService.ISettlementService, BusinessManager.Business.SrmManager.Service.SettlementService>();
+builder.Services.AddScoped<BusinessManager.Business.SrmManager.IService.IInvoiceService, BusinessManager.Business.SrmManager.Service.InvoiceService>();
 builder.Services.AddScoped<BusinessManager.WorkflowManager.IService.IWorkflowService, BusinessManager.WorkflowManager.Service.WorkflowService>();
 
 // 配置 SqlSugar

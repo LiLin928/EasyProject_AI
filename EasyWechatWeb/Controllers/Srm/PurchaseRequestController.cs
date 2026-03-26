@@ -102,7 +102,7 @@ namespace EasyWechatWeb.Controllers.Srm
         }
 
         [HttpPost("approve")]
-        public async Task<ApiResponse<bool>> Approve([FromQuery] long id, [FromQuery] bool approved)
+        public async Task<ApiResponse<bool>> Approve([FromQuery] string id, [FromQuery] bool approved)
         {
             try
             {

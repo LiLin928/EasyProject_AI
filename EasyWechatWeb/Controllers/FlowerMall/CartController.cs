@@ -88,9 +88,13 @@ namespace EasyWechatWeb.Controllers.FlowerMall
         {
             try
             {
-                var userId = long.Parse(GetCurrentUserId() ?? "0");
-                var result = await _cartService.ClearAsync(userId);
-                return Success(result, "清空成功");
+                var userId = GetCurrentUserId() ?? string.Empty;
+                var cartList = await _cartService.GetListAsync(userId);
+                foreach (var item in cartList)
+                {
+                    await _cartService.DeleteAsync(userId, item.GoodsId?.ToString() ?? string.Empty);
+                }
+                return Success(true, "清空成功");
             }
             catch (System.Exception ex)
             {

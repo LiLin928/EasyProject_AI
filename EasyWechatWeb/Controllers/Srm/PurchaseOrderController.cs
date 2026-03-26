@@ -56,18 +56,18 @@ namespace EasyWechatWeb.Controllers.Srm
         }
 
         [HttpPost("create")]
-        public async Task<ApiResponse<long>> Create([FromBody] SrmPurchaseOrderReq req)
+        public async Task<ApiResponse<string>> Create([FromBody] SrmPurchaseOrderReq req)
         {
             try
             {
-                var userId = long.Parse(GetCurrentUserId() ?? "0");
+                var userId = GetCurrentUserId() ?? string.Empty;
                 var id = await _service.CreateAsync(userId, req);
-                return Success(id, "创建成功");
+                return Success<string>(id, "创建成功");
             }
             catch (System.Exception ex)
             {
                 _logger.LogError(ex, "创建采购订单失败");
-                return Error<long>(ex.Message);
+                return Error<string>(ex.Message);
             }
         }
 
@@ -87,7 +87,7 @@ namespace EasyWechatWeb.Controllers.Srm
         }
 
         [HttpPost("delete")]
-        public async Task<ApiResponse<bool>> Delete([FromQuery] long id)
+        public async Task<ApiResponse<bool>> Delete([FromQuery] string id)
         {
             try
             {
