@@ -28,14 +28,14 @@
               <el-menu-item
                 v-for="child in route.children"
                 :key="child.path"
-                :index="`/${route.path}/${child.path}`"
+                :index="`${route.path}/${child.path}`"
               >
                 <el-icon v-if="child.meta?.icon" :component="getIcon(child.meta.icon)" />
                 <span>{{ child.meta?.title }}</span>
               </el-menu-item>
             </el-sub-menu>
             
-            <el-menu-item v-else :index="`/${route.path}`">
+            <el-menu-item v-else :index="`${route.path}`">
               <el-icon :component="getIcon(route.meta?.icon)" />
               <span>{{ route.meta?.title }}</span>
             </el-menu-item>
