@@ -104,6 +104,13 @@
       <div class="canvas-container">
         <div class="canvas-toolbar">
           <el-button-group>
+            <el-button @click="undo" :disabled="historyIndex <= 0">
+              <el-icon><RefreshLeft /></el-icon>
+            </el-button>
+            <el-button @click="redo" :disabled="historyIndex >= history.length - 1">
+              <el-icon><RefreshRight /></el-icon>
+            </el-button>
+            <el-divider direction="vertical" />
             <el-button @click="zoomOut">
               <el-icon><ZoomOut /></el-icon>
             </el-button>
@@ -111,16 +118,30 @@
             <el-button @click="zoomIn">
               <el-icon><ZoomIn /></el-icon>
             </el-button>
+            <el-divider direction="vertical" />
+            <el-button @click="autoLayout">
+              <el-icon><Grid /></el-icon>
+              自动布局
+            </el-button>
           </el-button-group>
-          <el-divider direction="vertical" />
-          <el-button @click="toggleGrid">
-            <el-icon><Grid /></el-icon>
-            网格：{{ showGrid ? '开' : '关' }}
-          </el-button>
-          <el-button @click="clearCanvas">
-            <el-icon><Delete /></el-icon>
-            清空
-          </el-button>
+          <div class="toolbar-right">
+            <el-button @click="toggleGrid">
+              <el-icon><Grid /></el-icon>
+              网格：{{ showGrid ? '开' : '关' }}
+            </el-button>
+            <el-button @click="loadTemplate">
+              <el-icon><FolderOpened /></el-icon>
+              模板
+            </el-button>
+            <el-button @click="exportScreen">
+              <el-icon><Download /></el-icon>
+              导出
+            </el-button>
+            <el-button @click="clearCanvas">
+              <el-icon><Delete /></el-icon>
+              清空
+            </el-button>
+          </div>
         </div>
         
         <div
@@ -297,7 +318,7 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { LineChart, BarChart, PieChart } from 'echarts/charts'
+import { LineChart, BarChart, PieChart, RadarChart } from 'echarts/charts'
 import {
   TitleComponent,
   TooltipComponent,
@@ -326,7 +347,11 @@ import {
   List,
   TrophyBase,
   Picture,
-  Link
+  Link,
+  RefreshLeft,
+  RefreshRight,
+  FolderOpened,
+  Download
 } from '@element-plus/icons-vue'
 
 // 注册 ECharts
@@ -335,6 +360,8 @@ use([
   LineChart,
   BarChart,
   PieChart,
+  RadarChart,
+  AreaChart,
   TitleComponent,
   TooltipComponent,
   LegendComponent,
@@ -351,6 +378,32 @@ const showGrid = ref(true)
 const activeTab = ref('basic')
 const selectedWidget = ref<any>(null)
 const widgets = ref<any[]>([])
+
+// 撤销/重做历史
+const history = ref<any[]>([])
+const historyIndex = ref(-1)
+
+// 大屏模板
+const screenTemplates = [
+  {
+    name: '销售数据大屏',
+    widgets: [
+      { type: 'numberCard', name: '总销售额', x: 50, y: 50, width: 250, height: 150, config: { value: '¥1,234,567', label: '今日销售额' } },
+      { type: 'line', name: '销售趋势', x: 350, y: 50, width: 400, height: 300 },
+      { type: 'pie', name: '产品分类', x: 800, y: 50, width: 350, height: 350 },
+      { type: 'bar', name: '区域销售', x: 50, y: 250, width: 600, height: 300 },
+      { type: 'table', name: '订单列表', x: 700, y: 450, width: 450, height: 250 }
+    ]
+  },
+  {
+    name: '运营监控大屏',
+    widgets: [
+      { type: 'numberCard', name: '用户总数', x: 50, y: 50, width: 200, height: 120, config: { value: '88,888', label: '活跃用户' } },
+      { type: 'line', name: '访问量趋势', x: 300, y: 50, width: 500, height: 250 },
+      { type: 'ranking', name: '热门商品', x: 850, y: 50, width: 300, height: 400 }
+    ]
+  }
+]
 
 // 组件定义
 const components = reactive({
@@ -414,7 +467,8 @@ const getChartOption = (widget: any) => {
       series: [{
         data: [820, 932, 901, 934, 1290, 1330],
         type: 'line',
-        smooth: true
+        smooth: true,
+        areaStyle: widget.config?.showArea ? {} : null
       }]
     }
   }
@@ -429,7 +483,8 @@ const getChartOption = (widget: any) => {
       yAxis: { type: 'value' },
       series: [{
         data: [120, 200, 150, 80, 70, 110, 130],
-        type: 'bar'
+        type: 'bar',
+        barMaxWidth: 50
       }]
     }
   }
@@ -437,13 +492,54 @@ const getChartOption = (widget: any) => {
   if (widget.type === 'pie') {
     return {
       tooltip: { trigger: 'item' },
+      legend: { top: '5%', left: 'center' },
       series: [{
         type: 'pie',
-        radius: '50%',
+        radius: ['40%', '70%'],
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 10,
+          borderColor: '#fff',
+          borderWidth: 2
+        },
+        label: { show: false, position: 'center' },
+        emphasis: {
+          label: { show: true, fontSize: 20, fontWeight: 'bold' }
+        },
         data: [
           { value: 1048, name: '搜索' },
           { value: 735, name: '直接' },
-          { value: 580, name: '邮件' }
+          { value: 580, name: '邮件' },
+          { value: 484, name: '联盟' },
+          { value: 300, name: '视频' }
+        ]
+      }]
+    }
+  }
+  
+  if (widget.type === 'radar') {
+    return {
+      radar: {
+        indicator: [
+          { name: '销售', max: 6500 },
+          { name: '管理', max: 16000 },
+          { name: '信息', max: 30000 },
+          { name: '客服', max: 38000 },
+          { name: '研发', max: 52000 },
+          { name: '市场', max: 25000 }
+        ]
+      },
+      series: [{
+        type: 'radar',
+        data: [
+          {
+            value: [4200, 3000, 20000, 35000, 50000, 18000],
+            name: '预算'
+          },
+          {
+            value: [5000, 14000, 28000, 26000, 42000, 21000],
+            name: '实际'
+          }
         ]
       }]
     }
@@ -563,6 +659,112 @@ const toggleGrid = () => {
   showGrid.value = !showGrid.value
 }
 
+// 撤销/重做
+const saveToHistory = () => {
+  const state = JSON.stringify({ widgets: widgets.value })
+  history.value = history.value.slice(0, historyIndex.value + 1)
+  history.value.push(state)
+  historyIndex.value = history.value.length - 1
+}
+
+const undo = () => {
+  if (historyIndex.value > 0) {
+    historyIndex.value--
+    const state = JSON.parse(history.value[historyIndex.value])
+    widgets.value = state.widgets
+    ElMessage.success('已撤销')
+  }
+}
+
+const redo = () => {
+  if (historyIndex.value < history.value.length - 1) {
+    historyIndex.value++
+    const state = JSON.parse(history.value[historyIndex.value])
+    widgets.value = state.widgets
+    ElMessage.success('已重做')
+  }
+}
+
+// 自动布局
+const autoLayout = () => {
+  const gapX = 50
+  const gapY = 50
+  const widgetWidth = 300
+  const widgetHeight = 200
+  const cols = 4
+  
+  widgets.value.forEach((widget, index) => {
+    const col = index % cols
+    const row = Math.floor(index / cols)
+    widget.x = gapX + col * (widgetWidth + gapX)
+    widget.y = gapY + row * (widgetHeight + gapY)
+    widget.width = widgetWidth
+    widget.height = widgetHeight
+  })
+  
+  saveToHistory()
+  ElMessage.success('自动布局完成')
+}
+
+// 加载模板
+const loadTemplate = async () => {
+  try {
+    const { value: selectedTemplate } = await ElMessageBox.prompt(
+      '请输入模板名称：<br/>' + screenTemplates.map(t => `• ${t.name}`).join('<br/>'),
+      '选择大屏模板',
+      {
+        dangerouslyUseHTMLString: true,
+        inputPattern: /.+/,
+        inputErrorMessage: '请输入有效的模板名称'
+      }
+    )
+    
+    const template = screenTemplates.find(t => t.name === selectedTemplate)
+    if (!template) {
+      ElMessage.error('未找到该模板')
+      return
+    }
+    
+    widgets.value = template.widgets.map((w: any) => ({
+      ...w,
+      id: `widget_${Date.now()}_${Math.random()}`,
+      config: {
+        dataType: 'static',
+        showTitle: true,
+        backgroundColor: '#ffffff',
+        textColor: '#333333',
+        borderRadius: 4,
+        ...w.config
+      }
+    }))
+    
+    screenName.value = template.name
+    saveToHistory()
+    ElMessage.success(`模板"${template.name}"已加载`)
+  } catch (error: any) {
+    if (error !== 'cancel') console.error('加载模板失败:', error)
+  }
+}
+
+// 导出大屏
+const exportScreen = () => {
+  const screenData = {
+    name: screenName.value,
+    widgets: widgets.value,
+    exportTime: new Date().toISOString()
+  }
+  
+  const blob = new Blob([JSON.stringify(screenData, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${screenName.value || 'screen'}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+  
+  ElMessage.success('大屏配置已导出')
+}
+
 // 保存/发布
 const saveScreen = () => {
   const screenData = {
@@ -571,6 +773,7 @@ const saveScreen = () => {
     saveTime: new Date().toISOString()
   }
   console.log('保存大屏:', screenData)
+  saveToHistory()
   ElMessage.success('大屏已保存')
 }
 
@@ -599,6 +802,11 @@ const backToList = () => {
 // 组件卸载时清理
 onUnmounted(() => {
   widgets.value = []
+})
+
+// 初始化
+onMounted(() => {
+  saveToHistory() // 初始化历史记录
 })
 </script>
 
