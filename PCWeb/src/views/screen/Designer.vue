@@ -103,32 +103,65 @@
       <!-- 中间画布 -->
       <div class="canvas-container">
         <div class="canvas-toolbar">
-          <el-button-group>
-            <el-button @click="undo" :disabled="historyIndex <= 0">
-              <el-icon><RefreshLeft /></el-icon>
-            </el-button>
-            <el-button @click="redo" :disabled="historyIndex >= history.length - 1">
-              <el-icon><RefreshRight /></el-icon>
-            </el-button>
-            <el-divider direction="vertical" />
-            <el-button @click="zoomOut">
-              <el-icon><ZoomOut /></el-icon>
-            </el-button>
-            <el-button @click="resetZoom">{{ Math.round(canvasZoom * 100) }}%</el-button>
-            <el-button @click="zoomIn">
-              <el-icon><ZoomIn /></el-icon>
-            </el-button>
-            <el-divider direction="vertical" />
-            <el-button @click="autoLayout">
-              <el-icon><Grid /></el-icon>
-              自动布局
-            </el-button>
-          </el-button-group>
-          <div class="toolbar-right">
+          <div class="toolbar-group">
+            <el-button-group>
+              <el-button @click="undo" :disabled="historyIndex <= 0">
+                <el-icon><RefreshLeft /></el-icon>
+              </el-button>
+              <el-button @click="redo" :disabled="historyIndex >= history.length - 1">
+                <el-icon><RefreshRight /></el-icon>
+              </el-button>
+            </el-button-group>
+          </div>
+          
+          <div class="toolbar-group">
+            <el-button-group>
+              <el-button @click="zoomOut">
+                <el-icon><ZoomOut /></el-icon>
+              </el-button>
+              <el-button @click="resetZoom">{{ Math.round(canvasZoom * 100) }}%</el-button>
+              <el-button @click="zoomIn">
+                <el-icon><ZoomIn /></el-icon>
+              </el-button>
+            </el-button-group>
+          </div>
+          
+          <div class="toolbar-group" v-if="selectedWidget">
+            <el-button-group>
+              <el-button @click="alignLeft" title="左对齐">
+                <el-icon><ArrowLeft /></el-icon>
+              </el-button>
+              <el-button @click="alignCenter" title="水平居中">
+                <el-icon><FullScreen /></el-icon>
+              </el-button>
+              <el-button @click="alignRight" title="右对齐">
+                <el-icon><ArrowRight /></el-icon>
+              </el-button>
+              <el-divider direction="vertical" />
+              <el-button @click="alignTop" title="顶部对齐">
+                <el-icon><ArrowUp /></el-icon>
+              </el-button>
+              <el-button @click="alignMiddle" title="垂直居中">
+                <el-icon><FullScreen /></el-icon>
+              </el-button>
+              <el-button @click="alignBottom" title="底部对齐">
+                <el-icon><ArrowDown /></el-icon>
+              </el-button>
+            </el-button-group>
+          </div>
+          
+          <div class="toolbar-group">
             <el-button @click="toggleGrid">
               <el-icon><Grid /></el-icon>
               网格：{{ showGrid ? '开' : '关' }}
             </el-button>
+            <el-button @click="toggleLayers">
+              <el-icon><Menu /></el-icon>
+              图层
+            </el-button>
+          </div>
+          
+          <div class="toolbar-group">
             <el-button @click="loadTemplate">
               <el-icon><FolderOpened /></el-icon>
               模板
@@ -216,8 +249,46 @@
         </div>
       </div>
 
-      <!-- 右侧属性面板 -->
-      <div class="property-panel">
+      <!-- 右侧面板：属性或图层管理 -->
+      <div class="property-panel" v-if="showLayersPanel">
+        <div class="panel-header">
+          <span class="panel-title">图层管理</span>
+          <el-button type="text" @click="toggleLayers">
+            <el-icon><Close /></el-icon>
+          </el-button>
+        </div>
+        
+        <div class="layers-list">
+          <draggable v-model="widgets" :list="widgets" item-key="id" @end="onDragEnd">
+            <template #item="{ element }">
+              <div
+                class="layer-item"
+                :class="{ active: selectedWidget?.id === element.id }"
+                @click="selectWidget(element)"
+              >
+                <el-icon :component="getComponentIcon(element.type)" />
+                <span class="layer-name">{{ element.name }}</span>
+                <div class="layer-actions">
+                  <el-button type="text" size="small" @click.stop="moveLayerUp(element.id)">
+                    <el-icon><Top /></el-icon>
+                  </el-button>
+                  <el-button type="text" size="small" @click.stop="moveLayerDown(element.id)">
+                    <el-icon><Bottom /></el-icon>
+                  </el-button>
+                  <el-button type="text" size="small" @click.stop="toggleLayerVisibility(element)">
+                    <el-icon :component="element.config?.visible !== false ? View : Hide" />
+                  </el-button>
+                  <el-button type="text" size="small" @click.stop="deleteWidget(element.id)">
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </div>
+              </div>
+            </template>
+          </draggable>
+        </div>
+      </div>
+      
+      <div class="property-panel" v-else>
         <el-tabs v-model="activeTab" type="border-card">
           <el-tab-pane label="基础设置" name="basic">
             <el-form label-position="top" size="small">
@@ -315,6 +386,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import draggable from 'vuedraggable'
 import { useRouter } from 'vue-router'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -351,7 +423,18 @@ import {
   RefreshLeft,
   RefreshRight,
   FolderOpened,
-  Download
+  Download,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  ArrowDown,
+  FullScreen,
+  Menu,
+  Close,
+  Top,
+  Bottom,
+  View,
+  Hide
 } from '@element-plus/icons-vue'
 
 // 注册 ECharts
@@ -799,9 +882,157 @@ const backToList = () => {
   router.push('/screen/project')
 }
 
+// 对齐工具
+const alignLeft = () => {
+  if (!selectedWidget.value) return
+  selectedWidget.value.x = 0
+  saveToHistory()
+  ElMessage.success('已左对齐')
+}
+
+const alignCenter = () => {
+  if (!selectedWidget.value || !canvasRef.value) return
+  const canvasWidth = canvasRef.value.clientWidth / canvasZoom.value
+  selectedWidget.value.x = (canvasWidth - selectedWidget.value.width) / 2
+  saveToHistory()
+  ElMessage.success('已水平居中')
+}
+
+const alignRight = () => {
+  if (!selectedWidget.value || !canvasRef.value) return
+  const canvasWidth = canvasRef.value.clientWidth / canvasZoom.value
+  selectedWidget.value.x = canvasWidth - selectedWidget.value.width
+  saveToHistory()
+  ElMessage.success('已右对齐')
+}
+
+const alignTop = () => {
+  if (!selectedWidget.value) return
+  selectedWidget.value.y = 0
+  saveToHistory()
+  ElMessage.success('已顶部对齐')
+}
+
+const alignMiddle = () => {
+  if (!selectedWidget.value || !canvasRef.value) return
+  const canvasHeight = canvasRef.value.clientHeight / canvasZoom.value
+  selectedWidget.value.y = (canvasHeight - selectedWidget.value.height) / 2
+  saveToHistory()
+  ElMessage.success('已垂直居中')
+}
+
+const alignBottom = () => {
+  if (!selectedWidget.value || !canvasRef.value) return
+  const canvasHeight = canvasRef.value.clientHeight / canvasZoom.value
+  selectedWidget.value.y = canvasHeight - selectedWidget.value.height
+  saveToHistory()
+  ElMessage.success('已底部对齐')
+}
+
+// 图层管理
+const toggleLayers = () => {
+  showLayersPanel.value = !showLayersPanel.value
+}
+
+const moveLayerUp = (id: string) => {
+  const index = widgets.value.findIndex(w => w.id === id)
+  if (index < widgets.value.length - 1) {
+    const temp = widgets.value[index]
+    widgets.value[index] = widgets.value[index + 1]
+    widgets.value[index + 1] = temp
+    saveToHistory()
+    ElMessage.success('图层已上移')
+  }
+}
+
+const moveLayerDown = (id: string) => {
+  const index = widgets.value.findIndex(w => w.id === id)
+  if (index > 0) {
+    const temp = widgets.value[index]
+    widgets.value[index] = widgets.value[index - 1]
+    widgets.value[index - 1] = temp
+    saveToHistory()
+    ElMessage.success('图层已下移')
+  }
+}
+
+const toggleLayerVisibility = (widget: any) => {
+  if (!widget.config) widget.config = {}
+  widget.config.visible = widget.config.visible !== false
+  ElMessage.success(widget.config.visible ? '图层已显示' : '图层已隐藏')
+}
+
+const getComponentIcon = (type: string) => {
+  const icons: Record<string, any> = {
+    line: TrendCharts,
+    bar: Histogram,
+    pie: PieChartIcon,
+    numberCard: Ticket,
+    table: Document,
+    list: List,
+    ranking: TrophyBase,
+    text: Document,
+    image: Picture,
+    iframe: Link
+  }
+  return icons[type] || Document
+}
+
+const onDragEnd = () => {
+  saveToHistory()
+}
+
+// 实时数据刷新
+const startDataRefresh = (widget: any) => {
+  if (!widget.config?.refreshInterval || widget.config.refreshInterval <= 0) return
+  
+  const timer = setInterval(() => {
+    refreshWidgetData(widget)
+  }, widget.config.refreshInterval)
+  
+  refreshTimers.value.set(widget.id, timer)
+  isAutoRefresh.value = true
+}
+
+const refreshWidgetData = async (widget: any) => {
+  if (!widget.config?.dataType || widget.config.dataType === 'static') return
+  
+  try {
+    if (widget.config.dataType === 'api' && widget.config.apiUrl) {
+      const response = await fetch(widget.config.apiUrl)
+      const data = await response.json()
+      // 更新 widget 数据
+      console.log('数据已刷新:', data)
+    } else if (widget.config.dataType === 'sql') {
+      // SQL 查询需要通过后端 API
+      console.log('执行 SQL 查询:', widget.config.sql)
+    }
+    ElMessage.success(`"${widget.name}" 数据已刷新`)
+  } catch (error) {
+    console.error('数据刷新失败:', error)
+  }
+}
+
+const stopDataRefresh = (widgetId: string) => {
+  const timer = refreshTimers.value.get(widgetId)
+  if (timer) {
+    clearInterval(timer)
+    refreshTimers.value.delete(widgetId)
+  }
+}
+
+const stopAllDataRefresh = () => {
+  refreshTimers.value.forEach((timer) => {
+    clearInterval(timer)
+  })
+  refreshTimers.value.clear()
+  isAutoRefresh.value = false
+}
+
 // 组件卸载时清理
 onUnmounted(() => {
   widgets.value = []
+  stopAllDataRefresh()
 })
 
 // 初始化
@@ -904,11 +1135,26 @@ onMounted(() => {
     z-index: 100;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 16px;
     background: #fff;
     padding: 8px 16px;
     border-radius: 8px;
     box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      
+      &:not(:last-child) {
+        padding-right: 16px;
+        border-right: 1px solid #e4e7ed;
+      }
+      
+      &:not(:first-child) {
+        padding-left: 16px;
+      }
+    }
   }
   
   .canvas {
@@ -1033,5 +1279,78 @@ onMounted(() => {
   border-left: 1px solid #e4e7ed;
   background: #fff;
   overflow-y: auto;
+  
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e4e7ed;
+    
+    .panel-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #303133;
+    }
+  }
+  
+  .layers-list {
+    padding: 8px;
+    
+    .layer-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      margin-bottom: 6px;
+      background: #f5f7fa;
+      border: 1px solid #e4e7ed;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s;
+      
+      &:hover {
+        background: #ecf5ff;
+        border-color: #409EFF;
+      }
+      
+      &.active {
+        background: #ecf5ff;
+        border-color: #409EFF;
+        box-shadow: 0 0 0 2px rgba(64,158,255,0.2);
+      }
+      
+      .el-icon {
+        font-size: 16px;
+        color: #409EFF;
+        flex-shrink: 0;
+      }
+      
+      .layer-name {
+        flex: 1;
+        font-size: 13px;
+        color: #606266;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      
+      .layer-actions {
+        display: flex;
+        gap: 4px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        
+        .el-button {
+          padding: 4px;
+          font-size: 14px;
+        }
+      }
+      
+      &:hover .layer-actions {
+        opacity: 1;
+      }
+    }
+  }
 }
 </style>
