@@ -620,7 +620,17 @@ const previewReport = () => {
     return
   }
   
-  ElMessage.info('预览功能开发中')
+  // 先保存报表
+  saveReport()
+  
+  // 跳转到预览页面
+  const currentTab = openTabs.value.find(t => t.id === activeTabId.value)
+  if (currentTab?.reportData?.id) {
+    router.push({
+      path: '/report/preview',
+      query: { id: currentTab.reportData.id }
+    })
+  }
 }
 
 // 返回列表

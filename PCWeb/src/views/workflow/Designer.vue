@@ -255,7 +255,7 @@
                   <span>脚本：{{ node.scriptContent ? '已配置' : '未设置' }}</span>
                 </div>
               </div>
-              <div class="node-connector" @mousedown.stop="startConnection(node)">
+              <div class="node-connector" @mousedown.stop="startConnection(node)" @mouseup.stop="endConnection(node)">
                 <el-icon><Plus /></el-icon>
               </div>
             </div>
@@ -1511,6 +1511,7 @@ const setupShortcuts = () => {
     height: 100%;
     overflow: auto;
     position: relative;
+    background: #f5f7fa;
     
     .canvas-grid {
       position: absolute;
@@ -1533,10 +1534,10 @@ const setupShortcuts = () => {
       width: 2000px;
       height: 2000px;
       pointer-events: none;
-      z-index: 1;
+      z-index: 10;
       
       .connection-path {
-        pointer-events: stroke;
+        pointer-events: all;
         cursor: pointer;
         
         &:hover {
@@ -1552,7 +1553,8 @@ const setupShortcuts = () => {
       min-height: 600px;
       transform-origin: top left;
       transition: transform 0.3s;
-      z-index: 2;
+      z-index: 20;
+      pointer-events: all;
     }
   }
 }

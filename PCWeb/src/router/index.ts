@@ -160,6 +160,12 @@ const routes: RouteRecordRaw[] = [
         name: 'ReportDesignerEdit',
         component: () => import('@/views/report/Designer.vue'),
         meta: { title: '编辑报表', icon: 'DataAnalysis' }
+      },
+      {
+        path: 'preview',
+        name: 'ReportPreview',
+        component: () => import('@/views/report/Preview.vue'),
+        meta: { title: '报表预览', icon: 'View' }
       }
     ]
   },

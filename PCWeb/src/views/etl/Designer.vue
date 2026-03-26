@@ -187,10 +187,10 @@
                 <div class="task-info">{{ getTaskDescription(task) }}</div>
               </div>
               <!-- 连接点 -->
-              <div class="connector input" @mousedown.stop="startConnection(task, 'input')">
+              <div class="connector input" @mousedown.stop="startConnection(task, 'input')" @mouseup.stop="endConnection(task)">
                 <el-icon><Plus /></el-icon>
               </div>
-              <div class="connector output" @mousedown.stop="startConnection(task, 'output')">
+              <div class="connector output" @mousedown.stop="startConnection(task, 'output')" @mouseup.stop="endConnection(task)">
                 <el-icon><Plus /></el-icon>
               </div>
             </div>
@@ -961,6 +961,7 @@ onMounted(() => {
     height: 100%;
     overflow: auto;
     position: relative;
+    background: #f5f7fa;
     
     .canvas-grid {
       position: absolute;
@@ -983,10 +984,10 @@ onMounted(() => {
       width: 3000px;
       height: 2000px;
       pointer-events: none;
-      z-index: 1;
+      z-index: 10;
       
       .connection-path {
-        pointer-events: stroke;
+        pointer-events: all;
         cursor: pointer;
         
         &:hover {
@@ -1002,7 +1003,8 @@ onMounted(() => {
       min-height: 1500px;
       transform-origin: top left;
       transition: transform 0.3s;
-      z-index: 2;
+      z-index: 20;
+      pointer-events: all;
     }
   }
 }
