@@ -38,8 +38,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 
+const router = useRouter()
 const loading = ref(false)
 const tableData = ref<any[]>([])
 
@@ -49,9 +51,9 @@ onMounted(() => {
   ]
 })
 
-const handleCreate = () => ElMessage.info('新建 ETL 任务功能待实现')
+const handleCreate = () => router.push('/etl/designer')
 const handleRun = (row: any) => ElMessage.info(`执行任务：${row.taskName}`)
-const handleEdit = (row: any) => ElMessage.info(`编辑任务：${row.taskName}`)
+const handleEdit = (row: any) => router.push(`/etl/designer/${row.id}`)
 const handleDelete = (row: any) => ElMessage.info(`删除任务：${row.taskName}`)
 </script>
 

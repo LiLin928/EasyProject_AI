@@ -122,6 +122,18 @@ const routes: RouteRecordRaw[] = [
         name: 'EtlTask',
         component: () => import('@/views/etl/Task.vue'),
         meta: { title: 'ETL 任务', icon: 'Task' }
+      },
+      {
+        path: 'designer',
+        name: 'EtlDesigner',
+        component: () => import('@/views/etl/Designer.vue'),
+        meta: { title: 'ETL 设计器', icon: 'DataLine' }
+      },
+      {
+        path: 'designer/:id',
+        name: 'EtlDesignerEdit',
+        component: () => import('@/views/etl/Designer.vue'),
+        meta: { title: '编辑 ETL 任务', icon: 'DataLine' }
       }
     ]
   },
