@@ -8,6 +8,22 @@
         </el-button>
         <span class="workflow-title">{{ workflowName || '新建工作流' }}</span>
       </div>
+      <div class="header-left">
+        <el-input
+          v-model="workflowName"
+          placeholder="输入工作流名称"
+          style="width: 300px"
+          clearable
+        >
+          <template #prefix>
+            <el-icon><Edit /></el-icon>
+          </template>
+        </el-input>
+        <el-button @click="loadTemplate">
+          <el-icon><FolderOpened /></el-icon>
+          模板
+        </el-button>
+      </div>
       <div class="header-right">
         <el-button @click="saveWorkflow">
           <el-icon><Save /></el-icon>
@@ -23,13 +39,22 @@
     <div class="designer-body">
       <!-- 左侧组件面板 -->
       <div class="component-panel">
-        <div class="panel-title">组件</div>
+        <div class="panel-header">
+          <div class="panel-title">组件</div>
+          <el-input
+            v-model="searchKeyword"
+            placeholder="搜索节点..."
+            size="small"
+            clearable
+            prefix-icon="Search"
+          />
+        </div>
         <el-divider />
-        <div class="component-section">
+        <div class="component-section" v-if="filteredNodes.basic.length > 0">
           <div class="section-title">基础节点</div>
           <div
             class="component-item"
-            v-for="node in basicNodes"
+            v-for="node in filteredNodes.basic"
             :key="node.type"
             draggable="true"
             @dragstart="onDragStart($event, node)"
@@ -39,11 +64,11 @@
           </div>
         </div>
         <el-divider />
-        <div class="component-section">
+        <div class="component-section" v-if="filteredNodes.gateway.length > 0">
           <div class="section-title">网关</div>
           <div
             class="component-item"
-            v-for="node in gatewayNodes"
+            v-for="node in filteredNodes.gateway"
             :key="node.type"
             draggable="true"
             @dragstart="onDragStart($event, node)"
@@ -53,11 +78,11 @@
           </div>
         </div>
         <el-divider />
-        <div class="component-section">
+        <div class="component-section" v-if="filteredNodes.other.length > 0">
           <div class="section-title">其他</div>
           <div
             class="component-item"
-            v-for="node in otherNodes"
+            v-for="node in filteredNodes.other"
             :key="node.type"
             draggable="true"
             @dragstart="onDragStart($event, node)"
@@ -96,6 +121,10 @@
             <el-button @click="toggleGrid">
               <el-icon><Grid /></el-icon>
               网格：{{ showGrid ? '开' : '关' }}
+            </el-button>
+            <el-button @click="toggleMinimap">
+              <el-icon><MapLocation /></el-icon>
+              地图：{{ showMinimap ? '开' : '关' }}
             </el-button>
             <el-button @click="validateWorkflow">
               <el-icon><CircleCheck /></el-icon>
@@ -145,6 +174,22 @@
               @click="selectConnection(conn)"
             />
           </svg>
+          
+          <!-- 迷你地图 -->
+          <div class="minimap" v-if="showMinimap">
+            <div class="minimap-content" :style="{ transform: `scale(${minimapScale})` }">
+              <div class="minimap-node start" :style="getMinimapNodePosition(startNode)"></div>
+              <div
+                v-for="node in nodes"
+                :key="node.id"
+                class="minimap-node"
+                :class="'node-' + node.type"
+                :style="getMinimapNodePosition(node)"
+              ></div>
+              <div class="minimap-node end" :style="getMinimapNodePosition(endNode)"></div>
+            </div>
+            <div class="minimap-viewport" :style="getViewportStyle()"></div>
+          </div>
           
           <div class="canvas-content" :style="{ transform: `scale(${zoomLevel})` }">
             <!-- 开始节点 -->
@@ -333,7 +378,11 @@ import {
   Grid,
   Delete,
   CopyDocument,
-  Scissor
+  Scissor,
+  Edit,
+  FolderOpened,
+  Search,
+  MapLocation
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
@@ -364,6 +413,41 @@ const copiedNode = ref<any>(null)
 // 快捷键
 const shortcuts = ref<Map<string, Function>>(new Map())
 
+// 搜索
+const searchKeyword = ref('')
+
+// 迷你地图
+const showMinimap = ref(true)
+const minimapScale = ref(0.1)
+
+// 工作流模板
+const workflowTemplates = [
+  {
+    name: '请假审批流程',
+    nodes: [
+      { type: 'approver', name: '部门经理审批', approverType: 'role', roleIds: ['role1'] },
+      { type: 'approver', name: '人事审批', approverType: 'role', roleIds: ['role3'] }
+    ]
+  },
+  {
+    name: '采购申请流程',
+    nodes: [
+      { type: 'approver', name: '部门经理审批', approverType: 'role', roleIds: ['role1'] },
+      { type: 'exclusive', name: '金额判断' },
+      { type: 'approver', name: '财务审批', approverType: 'role', roleIds: ['role2'] },
+      { type: 'approver', name: '总经理审批', approverType: 'role', roleIds: ['role1'] }
+    ]
+  },
+  {
+    name: '报销流程',
+    nodes: [
+      { type: 'approver', name: '直属领导审批', approverType: 'select' },
+      { type: 'approver', name: '财务审核', approverType: 'role', roleIds: ['role2'] },
+      { type: 'copyer', name: '抄送人事', copyerIds: ['user1'] }
+    ]
+  }
+]
+
 // 节点模板分类
 const basicNodes = [
   { type: 'approver', name: '审批人', icon: UserFilled },
@@ -382,6 +466,18 @@ const otherNodes = [
   { type: 'script', name: '脚本任务', icon: DocIcon },
   { type: 'endevent', name: '结束事件', icon: Flag }
 ]
+
+// 过滤节点
+const filteredNodes = computed(() => {
+  const keyword = searchKeyword.value.toLowerCase()
+  const filter = (nodes: any[]) => nodes.filter(n => n.name.toLowerCase().includes(keyword))
+  
+  return {
+    basic: filter(basicNodes),
+    gateway: filter(gatewayNodes),
+    other: filter(otherNodes)
+  }
+})
 
 // 节点数据
 const startNode = reactive({ id: 'start', type: 'start', x: 100, y: 200 })
@@ -780,6 +876,92 @@ const getGatewayDescription = (type: string) => {
     inclusive: '包容网关：满足条件的多个输出路径会执行'
   }
   return descriptions[type] || ''
+}
+
+// 加载模板
+const loadTemplate = async () => {
+  try {
+    const { value: selectedTemplate } = await ElMessageBox.prompt(
+      '请输入模板名称：<br/>' + workflowTemplates.map(t => `• ${t.name}`).join('<br/>'),
+      '选择工作流模板',
+      {
+        dangerouslyUseHTMLString: true,
+        inputPattern: /.+/,
+        inputErrorMessage: '请输入有效的模板名称'
+      }
+    )
+    
+    const template = workflowTemplates.find(t => t.name === selectedTemplate)
+    if (!template) {
+      ElMessage.error('未找到该模板')
+      return
+    }
+    
+    // 清空当前画布
+    nodes.value = []
+    connections.value = []
+    
+    // 加载模板节点
+    const gapY = 150
+    template.nodes.forEach((nodeConfig, index) => {
+      const newNode: any = {
+        ...nodeConfig,
+        id: `node_${Date.now()}_${index}`,
+        x: 300,
+        y: 100 + index * gapY,
+        name: nodeConfig.name,
+        approverNames: [],
+        roleNames: [],
+        copyerNames: []
+      }
+      nodes.value.push(newNode)
+    })
+    
+    // 自动创建连线
+    const allNodes = [startNode, ...nodes.value, endNode]
+    for (let i = 0; i < allNodes.length - 1; i++) {
+      connections.value.push({
+        id: `conn_${Date.now()}_${i}`,
+        from: allNodes[i],
+        to: allNodes[i + 1]
+      })
+    }
+    
+    workflowName.value = template.name
+    saveToHistory()
+    ElMessage.success(`模板"${template.name}"已加载`)
+  } catch (error: any) {
+    if (error !== 'cancel') console.error('加载模板失败:', error)
+  }
+}
+
+// 切换迷你地图
+const toggleMinimap = () => {
+  showMinimap.value = !showMinimap.value
+}
+
+// 获取迷你地图节点位置
+const getMinimapNodePosition = (node: any) => {
+  return {
+    left: `${node.x * minimapScale.value}px`,
+    top: `${node.y * minimapScale.value}px`,
+    width: '20px',
+    height: '40px'
+  }
+}
+
+// 获取视口样式
+const getViewportStyle = () => {
+  if (!canvasRef.value) return {}
+  
+  const canvas = canvasRef.value
+  const viewportWidth = canvas.clientWidth * minimapScale.value
+  const viewportHeight = canvas.clientHeight * minimapScale.value
+  
+  return {
+    width: `${viewportWidth}px`,
+    height: `${viewportHeight}px`
+  }
 }
 
 // 验证工作流
