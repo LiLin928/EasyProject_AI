@@ -155,7 +155,7 @@
             />
           </div>
         </div>
-        <div class="canvas" ref="canvasRef" @dragover="onDragOver" @drop="onDrop" @click="onCanvasClick" @mouseup="onMouseUp">
+        <div class="canvas" ref="canvasRef" @dragover="onDragOver" @drop="onDrop" @click="onCanvasClick" @mousemove="onMouseMove" @mouseup="onGlobalMouseUp">
           <!-- 网格背景 -->
           <div class="canvas-grid" v-if="showGrid" :style="{ transform: `scale(${zoomLevel})` }"></div>
           
@@ -166,6 +166,7 @@
                 <polygon points="0 0, 10 3.5, 0 7" fill="#409EFF" />
               </marker>
             </defs>
+            <!-- 已有连线 -->
             <path
               v-for="conn in connections"
               :key="conn.id"
@@ -176,6 +177,17 @@
               marker-end="url(#arrowhead)"
               class="connection-path"
               @click="selectConnection(conn)"
+            />
+            <!-- 正在拖拽的连线 -->
+            <path
+              v-if="isConnecting && connectionStart"
+              :d="getTempConnectionPath()"
+              stroke="#67C23A"
+              stroke-width="2"
+              stroke-dasharray="5,5"
+              fill="none"
+              marker-end="url(#arrowhead)"
+              class="temp-connection-path"
             />
           </svg>
           
@@ -212,11 +224,12 @@
               v-for="node in nodes"
               :key="node.id"
               class="node"
-              :class="['node-' + node.type, { selected: selectedNode?.id === node.id }]"
+              :class="['node-' + node.type, { selected: selectedNode?.id === node.id, dragging: isDraggingNode && draggingNode?.id === node.id }]"
               :style="getNodePosition(node)"
               :data-node-id="node.id"
               @click="selectNode(node)"
               @mouseup.stop="onNodeMouseUp(node)"
+              @mousedown.stop="startDragNode($event, node)"
             >
               <div class="node-header">
                 <el-icon :component="getNodeIcon(node.type)" />
@@ -678,6 +691,31 @@ const deleteNode = (nodeId: string) => {
   ElMessage.success('节点已删除')
 }
 
+// 鼠标移动时的位置
+const mousePosition = ref({ x: 0, y: 0 })
+
+// 节点拖拽相关
+const isDraggingNode = ref(false)
+const draggingNode = ref<any>(null)
+const dragOffset = ref({ x: 0, y: 0 })
+
+// 开始拖拽节点
+const startDragNode = (event: MouseEvent, node: any) => {
+  // 如果正在连线，不启动拖拽
+  if (isConnecting.value) return
+  
+  isDraggingNode.value = true
+  draggingNode.value = node
+  
+  const rect = canvasRef.value?.getBoundingClientRect()
+  if (rect) {
+    dragOffset.value = {
+      x: (event.clientX - rect.left) / zoomLevel.value - node.x,
+      y: (event.clientY - rect.top) / zoomLevel.value - node.y
+    }
+  }
+}
+
 // 开始连线
 const startConnection = (node: any) => {
   isConnecting.value = true
@@ -714,6 +752,43 @@ const endConnection = (targetNode: any) => {
   connectionStart.value = null
 }
 
+// 鼠标移动
+const onMouseMove = (event: MouseEvent) => {
+  if (!canvasRef.value) return
+  
+  const rect = canvasRef.value.getBoundingClientRect()
+  mousePosition.value = {
+    x: (event.clientX - rect.left) / zoomLevel.value,
+    y: (event.clientY - rect.top) / zoomLevel.value
+  }
+  
+  // 处理节点拖拽
+  if (isDraggingNode.value && draggingNode.value) {
+    const x = (event.clientX - rect.left) / zoomLevel.value - dragOffset.value.x
+    const y = (event.clientY - rect.top) / zoomLevel.value - dragOffset.value.y
+    
+    draggingNode.value.x = Math.max(0, x)
+    draggingNode.value.y = Math.max(0, y)
+  }
+}
+
+// 获取临时连线路径
+const getTempConnectionPath = () => {
+  if (!connectionStart.value) return ''
+  
+  const startX = connectionStart.value.x + 200
+  const startY = connectionStart.value.y + 40
+  const endX = mousePosition.value.x
+  const endY = mousePosition.value.y
+  
+  const controlPoint1X = startX + (endX - startX) / 2
+  const controlPoint1Y = startY
+  const controlPoint2X = endX - (endX - startX) / 2
+  const controlPoint2Y = endY
+  
+  return `M ${startX} ${startY} C ${controlPoint1X} ${controlPoint1Y}, ${controlPoint2X} ${controlPoint2Y}, ${endX} ${endY}`
+}
+
 // 画布点击事件
 const onCanvasClick = (event: MouseEvent) => {
   const target = event.target as HTMLElement
@@ -734,11 +809,17 @@ const onNodeMouseUp = (node: any) => {
   }
 }
 
-// 鼠标松开事件
-const onMouseUp = (event: MouseEvent) => {
+// 全局鼠标松开
+const onGlobalMouseUp = () => {
   if (isConnecting.value) {
     isConnecting.value = false
     connectionStart.value = null
+  }
+  
+  if (isDraggingNode.value) {
+    isDraggingNode.value = false
+    draggingNode.value = null
+    saveToHistory()
   }
 }
 
@@ -1537,7 +1618,7 @@ const setupShortcuts = () => {
       z-index: 10;
       
       .connection-path {
-        pointer-events: all;
+        pointer-events: stroke;
         cursor: pointer;
         
         &:hover {
@@ -1554,7 +1635,17 @@ const setupShortcuts = () => {
       transform-origin: top left;
       transition: transform 0.3s;
       z-index: 20;
-      pointer-events: all;
+    }
+    
+    .node {
+      cursor: move;
+      user-select: none;
+      
+      &.dragging {
+        opacity: 0.8;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        z-index: 100 !important;
+      }
     }
   }
 }

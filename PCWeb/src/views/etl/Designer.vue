@@ -142,6 +142,8 @@
           @dragover="onDragOver"
           @drop="onDrop"
           @click="onCanvasClick"
+          @mousemove="onMouseMove"
+          @mouseup="onGlobalMouseUp"
         >
           <!-- 网格背景 -->
           <div class="canvas-grid" v-if="showGrid" :style="{ transform: `scale(${canvasZoom})` }"></div>
@@ -153,6 +155,7 @@
                 <polygon points="0 0, 10 3.5, 0 7" fill="#409EFF" />
               </marker>
             </defs>
+            <!-- 已有连线 -->
             <path
               v-for="conn in connections"
               :key="conn.id"
@@ -164,6 +167,17 @@
               class="connection-path"
               @click="selectConnection(conn)"
             />
+            <!-- 正在拖拽的连线 -->
+            <path
+              v-if="isConnecting && connectionStart"
+              :d="getTempConnectionPath()"
+              stroke="#67C23A"
+              stroke-width="2"
+              stroke-dasharray="5,5"
+              fill="none"
+              marker-end="url(#arrowhead)"
+              class="temp-connection-path"
+            />
           </svg>
           
           <div class="canvas-content" :style="{ transform: `scale(${canvasZoom})` }">
@@ -172,9 +186,10 @@
               v-for="task in tasks"
               :key="task.id"
               class="task-node"
-              :class="['task-' + task.type, { selected: selectedTask?.id === task.id }]"
+              :class="['task-' + task.type, { selected: selectedTask?.id === task.id, dragging: isDraggingTask && draggingTask?.id === task.id }]"
               :style="getTaskPosition(task)"
               @click="selectTask(task)"
+              @mousedown.stop="startDragTask($event, task)"
             >
               <div class="task-header">
                 <el-icon :component="getTaskIcon(task.type)" />
@@ -543,6 +558,30 @@ const deleteTask = (id: string) => {
   ElMessage.success('任务已删除')
 }
 
+// 鼠标移动时的位置
+const mousePosition = ref({ x: 0, y: 0 })
+
+// 任务拖拽相关
+const isDraggingTask = ref(false)
+const draggingTask = ref<any>(null)
+const dragOffset = ref({ x: 0, y: 0 })
+
+// 开始拖拽任务
+const startDragTask = (event: MouseEvent, task: any) => {
+  if (isConnecting) return
+  
+  isDraggingTask.value = true
+  draggingTask.value = task
+  
+  const rect = canvasRef.value?.getBoundingClientRect()
+  if (rect) {
+    dragOffset.value = {
+      x: (event.clientX - rect.left) / canvasZoom.value - task.x,
+      y: (event.clientY - rect.top) / canvasZoom.value - task.y
+    }
+  }
+}
+
 // 开始连线
 const startConnection = (task: any, type: 'input' | 'output') => {
   isConnecting = true
@@ -590,6 +629,43 @@ const endConnection = (targetTask: any) => {
   connectionType = null
 }
 
+// 鼠标移动
+const onMouseMove = (event: MouseEvent) => {
+  if (!canvasRef.value) return
+  
+  const rect = canvasRef.value.getBoundingClientRect()
+  mousePosition.value = {
+    x: (event.clientX - rect.left) / canvasZoom.value,
+    y: (event.clientY - rect.top) / canvasZoom.value
+  }
+  
+  // 处理任务拖拽
+  if (isDraggingTask.value && draggingTask.value) {
+    const x = (event.clientX - rect.left) / canvasZoom.value - dragOffset.value.x
+    const y = (event.clientY - rect.top) / canvasZoom.value - dragOffset.value.y
+    
+    draggingTask.value.x = Math.max(0, x)
+    draggingTask.value.y = Math.max(0, y)
+  }
+}
+
+// 获取临时连线路径
+const getTempConnectionPath = () => {
+  if (!connectionStart) return ''
+  
+  const startX = connectionStart.x + connectionStart.width
+  const startY = connectionStart.y + connectionStart.height / 2
+  const endX = mousePosition.value.x
+  const endY = mousePosition.value.y
+  
+  const controlPoint1X = startX + (endX - startX) / 2
+  const controlPoint1Y = startY
+  const controlPoint2X = endX - (endX - startX) / 2
+  const controlPoint2Y = endY
+  
+  return `M ${startX} ${startY} C ${controlPoint1X} ${controlPoint1Y}, ${controlPoint2X} ${controlPoint2Y}, ${endX} ${endY}`
+}
+
 // 选择连线
 const selectConnection = (conn: any) => {
   selectedConnection.value = conn
@@ -614,6 +690,15 @@ const getConnectionPath = (from: any, to: any) => {
   const controlPoint2Y = endY
   
   return `M ${startX} ${startY} C ${controlPoint1X} ${controlPoint1Y}, ${controlPoint2X} ${controlPoint2Y}, ${endX} ${endY}`
+}
+
+// 全局鼠标松开
+const onGlobalMouseUp = () => {
+  if (isDraggingTask.value) {
+    isDraggingTask.value = false
+    draggingTask.value = null
+    saveToHistory()
+  }
 }
 
 // 缩放控制
@@ -987,7 +1072,7 @@ onMounted(() => {
       z-index: 10;
       
       .connection-path {
-        pointer-events: all;
+        pointer-events: stroke;
         cursor: pointer;
         
         &:hover {
@@ -1004,7 +1089,17 @@ onMounted(() => {
       transform-origin: top left;
       transition: transform 0.3s;
       z-index: 20;
-      pointer-events: all;
+    }
+    
+    .task-node {
+      cursor: move;
+      user-select: none;
+      
+      &.dragging {
+        opacity: 0.8;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        z-index: 100 !important;
+      }
     }
   }
 }
