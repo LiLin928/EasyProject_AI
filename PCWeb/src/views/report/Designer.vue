@@ -22,6 +22,10 @@
         </el-input>
       </div>
       <div class="header-right">
+        <el-button @click="newTab">
+          <el-icon><Plus /></el-icon>
+          新建
+        </el-button>
         <el-button @click="saveReport">
           <el-icon><Save /></el-icon>
           保存
@@ -34,6 +38,29 @@
     </div>
 
     <div class="designer-body">
+      <!-- 标签页导航栏 -->
+      <div class="tab-navbar">
+        <div class="tab-list">
+          <div
+            v-for="tab in openTabs"
+            :key="tab.id"
+            class="tab-item"
+            :class="{ active: activeTabId === tab.id }"
+            @click="switchTab(tab.id)"
+          >
+            <span class="tab-icon">📊</span>
+            <span class="tab-title">{{ tab.name }}</span>
+            <el-icon class="tab-close" @click.stop="closeTab(tab.id)"><Close /></el-icon>
+          </div>
+        </div>
+        <div class="tab-actions">
+          <el-button type="text" size="small" @click="closeAllTabs">
+            <el-icon><Close /></el-icon>
+            全部关闭
+          </el-button>
+        </div>
+      </div>
+
       <!-- 左侧配置面板 -->
       <div class="config-panel">
         <div class="panel-section">
@@ -119,8 +146,9 @@
       </div>
 
       <!-- 右侧配置区域 -->
-      <div class="main-panel">
-        <el-tabs v-model="activeTab" type="border-card">
+      <div class="main-content">
+        <div class="main-panel">
+          <el-tabs v-model="activeTab" type="border-card">
           <!-- 字段配置 -->
           <el-tab-pane label="字段配置" name="fields">
             <div class="tab-header">
@@ -365,6 +393,7 @@
             </el-button>
           </el-tab-pane>
         </el-tabs>
+        </div>
       </div>
     </div>
   </div>
@@ -386,33 +415,97 @@ import {
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
-const reportName = ref('')
-const reportCode = ref('RPT-' + Date.now())
-const reportCategory = ref('')
-const dataSourceType = ref('sql')
-const dataSource = ref('')
-const permissionType = ref('none')
-const defaultSort = ref('')
-const isEnabled = ref(true)
-const remark = ref('')
-const dataSourceSql = ref('')
+
+// 标签页管理
+const openTabs = ref<any[]>([
+  { id: 'tab_1', name: '新建报表', reportData: null }
+])
+const activeTabId = ref('tab_1')
+const tabCounter = ref(1)
+
+// 获取当前激活的报表数据
+const currentReport = computed(() => {
+  const tab = openTabs.value.find(t => t.id === activeTabId.value)
+  return tab ? tab.reportData : null
+})
+
+// 更新当前报表的字段
+const updateCurrentReport = (field: string, value: any) => {
+  const tab = openTabs.value.find(t => t.id === activeTabId.value)
+  if (tab && tab.reportData) {
+    tab.reportData[field] = value
+  }
+}
+
+const reportName = computed({
+  get: () => currentReport.value?.name || '',
+  set: (val) => {
+    updateCurrentReport('name', val)
+    // 更新标签页名称
+    const tab = openTabs.value.find(t => t.id === activeTabId.value)
+    if (tab) {
+      tab.name = val || '新建报表'
+    }
+  }
+})
+const reportCode = computed({
+  get: () => currentReport.value?.code || '',
+  set: (val) => updateCurrentReport('code', val)
+})
+const reportCategory = computed({
+  get: () => currentReport.value?.category || '',
+  set: (val) => updateCurrentReport('category', val)
+})
+const dataSourceType = computed({
+  get: () => currentReport.value?.dataSourceType || 'sql',
+  set: (val) => updateCurrentReport('dataSourceType', val)
+})
+const dataSource = computed({
+  get: () => currentReport.value?.dataSource || '',
+  set: (val) => updateCurrentReport('dataSource', val)
+})
+const permissionType = computed({
+  get: () => currentReport.value?.permissionType || 'none',
+  set: (val) => updateCurrentReport('permissionType', val)
+})
+const defaultSort = computed({
+  get: () => currentReport.value?.defaultSort || '',
+  set: (val) => updateCurrentReport('defaultSort', val)
+})
+const isEnabled = computed({
+  get: () => currentReport.value?.isEnabled !== false,
+  set: (val) => updateCurrentReport('isEnabled', val)
+})
+const remark = computed({
+  get: () => currentReport.value?.remark || '',
+  set: (val) => updateCurrentReport('remark', val)
+})
+const dataSourceSql = computed({
+  get: () => currentReport.value?.sql || '',
+  set: (val) => updateCurrentReport('sql', val)
+})
 const activeTab = ref('fields')
+
+// 字段配置
+const fieldConfigs = computed({
+  get: () => currentReport.value?.fields || [{ fieldName: '', displayName: '', fieldType: 'string', align: 'left', width: 120, visible: true, frozen: false, summary: false }],
+  set: (val) => updateCurrentReport('fields', val)
+})
+
+// 查询条件
+const queryConditions = computed({
+  get: () => currentReport.value?.conditions || [{ fieldName: '', displayName: '', controlType: 'text', queryType: 'eq', defaultValue: '', required: false }],
+  set: (val) => updateCurrentReport('conditions', val)
+})
+
+// 钻取链接
+const drillLinks = computed({
+  get: () => currentReport.value?.drillLinks || [],
+  set: (val) => updateCurrentReport('drillLinks', val)
+})
 
 // 解析出的字段
 const parsedFields = ref<any[]>([])
-
-// 字段配置
-const fieldConfigs = ref<any[]>([
-  { fieldName: '', displayName: '', fieldType: 'string', align: 'left', width: 120, visible: true, frozen: false, summary: false }
-])
-
-// 查询条件
-const queryConditions = ref<any[]>([
-  { fieldName: '', displayName: '', controlType: 'text', queryType: 'eq', defaultValue: '', required: false }
-])
-
-// 钻取链接
-const drillLinks = ref<any[]>([])
 
 // 解析字段
 const parseFields = () => {
@@ -535,9 +628,81 @@ const backToList = () => {
   router.push('/report/list')
 }
 
+// 标签页操作
+const switchTab = (tabId: string) => {
+  activeTabId.value = tabId
+}
+
+const closeTab = (tabId: string) => {
+  if (openTabs.value.length === 1) {
+    ElMessage.warning('至少保留一个标签页')
+    return
+  }
+  
+  const index = openTabs.value.findIndex(t => t.id === tabId)
+  if (index === -1) return
+  
+  // 如果关闭的是当前标签，切换到相邻标签
+  if (tabId === activeTabId.value) {
+    const newIndex = index > 0 ? index - 1 : index + 1
+    activeTabId.value = openTabs.value[newIndex].id
+  }
+  
+  openTabs.value.splice(index, 1)
+}
+
+const closeAllTabs = () => {
+  if (openTabs.value.length === 1) {
+    ElMessage.warning('至少保留一个标签页')
+    return
+  }
+  
+  openTabs.value = [{ id: `tab_${++tabCounter.value}`, name: '新建报表', reportData: null }]
+  activeTabId.value = openTabs.value[0].id
+}
+
+const newTab = () => {
+  const newTab = {
+    id: `tab_${++tabCounter.value}`,
+    name: '新建报表',
+    reportData: {
+      code: 'RPT-' + Date.now(),
+      name: '',
+      category: '',
+      dataSourceType: 'sql',
+      dataSource: '',
+      permissionType: 'none',
+      defaultSort: '',
+      isEnabled: true,
+      remark: '',
+      sql: '',
+      fields: [{ fieldName: '', displayName: '', fieldType: 'string', align: 'left', width: 120, visible: true, frozen: false, summary: false }],
+      conditions: [{ fieldName: '', displayName: '', controlType: 'text', queryType: 'eq', defaultValue: '', required: false }],
+      drillLinks: []
+    }
+  }
+  openTabs.value.push(newTab)
+  activeTabId.value = newTab.id
+}
+
 // 初始化
 onMounted(() => {
-  // 可以从路由参数加载已有报表配置
+  // 初始化第一个标签页的数据
+  openTabs.value[0].reportData = {
+    code: 'RPT-' + Date.now(),
+    name: '',
+    category: '',
+    dataSourceType: 'sql',
+    dataSource: '',
+    permissionType: 'none',
+    defaultSort: '',
+    isEnabled: true,
+    remark: '',
+    sql: '',
+    fields: [{ fieldName: '', displayName: '', fieldType: 'string', align: 'left', width: 120, visible: true, frozen: false, summary: false }],
+    conditions: [{ fieldName: '', displayName: '', controlType: 'text', queryType: 'eq', defaultValue: '', required: false }],
+    drillLinks: []
+  }
 })
 </script>
 
@@ -573,7 +738,89 @@ onMounted(() => {
 .designer-body {
   flex: 1;
   display: flex;
+  flex-direction: column;
   overflow: hidden;
+}
+
+.tab-navbar {
+  height: 40px;
+  background: #f5f7fa;
+  border-bottom: 1px solid #e4e7ed;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 16px;
+  
+  .tab-list {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    overflow-x: auto;
+    
+    .tab-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: #fff;
+      border: 1px solid #e4e7ed;
+      border-bottom: none;
+      border-radius: 4px 4px 0 0;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 13px;
+      white-space: nowrap;
+      
+      &:hover {
+        background: #ecf5ff;
+        border-color: #409EFF;
+        
+        .tab-close {
+          opacity: 1;
+        }
+      }
+      
+      &.active {
+        background: #fff;
+        border-color: #409EFF;
+        color: #409EFF;
+      }
+      
+      .tab-icon {
+        font-size: 14px;
+      }
+      
+      .tab-title {
+        max-width: 150px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      
+      .tab-close {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        opacity: 0;
+        transition: opacity 0.3s;
+        
+        &:hover {
+          background: #F56C6C;
+          color: #fff;
+        }
+      }
+    }
+  }
+  
+  .tab-actions {
+    .el-button {
+      color: #606266;
+      
+      &:hover {
+        color: #F56C6C;
+      }
+    }
+  }
 }
 
 .config-panel {
@@ -581,6 +828,20 @@ onMounted(() => {
   border-right: 1px solid #e4e7ed;
   padding: 20px;
   background: #fafafa;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.main-panel {
+  flex: 1;
+  padding: 20px;
+  background: #fff;
   overflow-y: auto;
   
   .panel-section {
