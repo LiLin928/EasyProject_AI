@@ -25,15 +25,46 @@
       <div class="component-panel">
         <div class="panel-title">组件</div>
         <el-divider />
-        <div
-          class="component-item"
-          v-for="node in nodeTemplates"
-          :key="node.type"
-          draggable="true"
-          @dragstart="onDragStart($event, node)"
-        >
-          <el-icon :component="node.icon" />
-          <span>{{ node.name }}</span>
+        <div class="component-section">
+          <div class="section-title">基础节点</div>
+          <div
+            class="component-item"
+            v-for="node in basicNodes"
+            :key="node.type"
+            draggable="true"
+            @dragstart="onDragStart($event, node)"
+          >
+            <el-icon :component="node.icon" />
+            <span>{{ node.name }}</span>
+          </div>
+        </div>
+        <el-divider />
+        <div class="component-section">
+          <div class="section-title">网关</div>
+          <div
+            class="component-item"
+            v-for="node in gatewayNodes"
+            :key="node.type"
+            draggable="true"
+            @dragstart="onDragStart($event, node)"
+          >
+            <el-icon :component="node.icon" />
+            <span>{{ node.name }}</span>
+          </div>
+        </div>
+        <el-divider />
+        <div class="component-section">
+          <div class="section-title">其他</div>
+          <div
+            class="component-item"
+            v-for="node in otherNodes"
+            :key="node.type"
+            draggable="true"
+            @dragstart="onDragStart($event, node)"
+          >
+            <el-icon :component="node.icon" />
+            <span>{{ node.name }}</span>
+          </div>
         </div>
       </div>
 
@@ -41,16 +72,43 @@
       <div class="canvas-container">
         <div class="canvas-toolbar">
           <el-button-group>
+            <el-button @click="undo" :disabled="historyIndex <= 0">
+              <el-icon><RefreshLeft /></el-icon>
+            </el-button>
+            <el-button @click="redo" :disabled="historyIndex >= history.length - 1">
+              <el-icon><RefreshRight /></el-icon>
+            </el-button>
+            <el-divider direction="vertical" />
             <el-button @click="zoomOut">
               <el-icon><ZoomOut /></el-icon>
             </el-button>
-            <el-button @click="resetZoom">
-              <el-icon><FullScreen /></el-icon>
-            </el-button>
+            <el-button @click="resetZoom">{{ Math.round(zoomLevel * 100) }}%</el-button>
             <el-button @click="zoomIn">
               <el-icon><ZoomIn /></el-icon>
             </el-button>
+            <el-divider direction="vertical" />
+            <el-button @click="autoLayout">
+              <el-icon><Arrange /></el-icon>
+              自动布局
+            </el-button>
           </el-button-group>
+          <div class="toolbar-right">
+            <el-button @click="exportWorkflow">
+              <el-icon><Download /></el-icon>
+              导出
+            </el-button>
+            <el-button @click="importTrigger.click()">
+              <el-icon><Upload /></el-icon>
+              导入
+            </el-button>
+            <input
+              ref="importTrigger"
+              type="file"
+              accept=".json"
+              style="display: none"
+              @change="onImportFile"
+            />
+          </div>
         </div>
         <div class="canvas" ref="canvasRef" @dragover="onDragOver" @drop="onDrop">
           <div class="canvas-content" :style="{ transform: `scale(${zoomLevel})` }">
@@ -90,11 +148,17 @@
                     发起人自选
                   </span>
                 </div>
-                <div v-if="node.type === 'condition'" class="node-info">
+                <div v-else-if="node.type === 'condition'" class="node-info">
                   <span>条件：{{ node.conditionExpression || '未设置' }}</span>
                 </div>
-                <div v-if="node.type === 'copyer'" class="node-info">
+                <div v-else-if="node.type === 'copyer'" class="node-info">
                   <span>抄送人：{{ node.copyerNames?.join('、') || '未设置' }}</span>
+                </div>
+                <div v-else-if="['exclusive', 'parallel', 'inclusive'].includes(node.type)" class="node-info">
+                  <span>{{ getGatewayName(node.type) }}</span>
+                </div>
+                <div v-else-if="node.type === 'script'" class="node-info">
+                  <span>脚本：{{ node.scriptContent ? '已配置' : '未设置' }}</span>
                 </div>
               </div>
             </div>
@@ -163,6 +227,26 @@
             />
           </el-form-item>
 
+          <!-- 网关节点设置 -->
+          <el-form-item label="网关类型" v-if="['exclusive', 'parallel', 'inclusive'].includes(selectedNode.type)">
+            <el-alert
+              :title="getGatewayDescription(selectedNode.type)"
+              type="info"
+              :closable="false"
+              show-icon
+            />
+          </el-form-item>
+
+          <!-- 脚本任务设置 -->
+          <el-form-item label="脚本内容" v-if="selectedNode.type === 'script'">
+            <el-input
+              v-model="selectedNode.scriptContent"
+              type="textarea"
+              :rows="5"
+              placeholder="请输入 JavaScript 代码"
+            />
+          </el-form-item>
+
           <el-form-item>
             <el-button type="primary" @click="updateNode">更新节点</el-button>
           </el-form-item>
@@ -189,7 +273,14 @@ import {
   UserFilled,
   Connection,
   Share,
-  QuestionFilled
+  QuestionFilled,
+  RefreshLeft,
+  RefreshRight,
+  Download,
+  Grid as Arrange,
+  Timer,
+  Document as DocIcon,
+  Flag
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
@@ -200,13 +291,29 @@ const canvasRef = ref<HTMLDivElement | null>(null)
 const zoomLevel = ref(1)
 const selectedNode = ref<any>(null)
 const workflowName = ref('')
+const importTrigger = ref<HTMLInputElement | null>(null)
 
-// 节点模板
-const nodeTemplates = [
+// 撤销/重做历史
+const history = ref<any[]>([])
+const historyIndex = ref(-1)
+
+// 节点模板分类
+const basicNodes = [
   { type: 'approver', name: '审批人', icon: UserFilled },
-  { type: 'condition', name: '条件分支', icon: Connection },
   { type: 'copyer', name: '抄送人', icon: Share },
   { type: 'notifier', name: '通知器', icon: QuestionFilled }
+]
+
+const gatewayNodes = [
+  { type: 'exclusive', name: '排他网关', icon: Connection },
+  { type: 'parallel', name: '并行网关', icon: Connection },
+  { type: 'inclusive', name: '包容网关', icon: Connection }
+]
+
+const otherNodes = [
+  { type: 'condition', name: '条件分支', icon: Timer },
+  { type: 'script', name: '脚本任务', icon: DocIcon },
+  { type: 'endevent', name: '结束事件', icon: Flag }
 ]
 
 // 节点数据
@@ -221,9 +328,14 @@ let draggedNode: any = null
 const getNodeIcon = (type: string) => {
   const iconMap: Record<string, any> = {
     approver: UserFilled,
-    condition: Connection,
+    condition: Timer,
     copyer: Share,
-    notifier: QuestionFilled
+    notifier: QuestionFilled,
+    exclusive: Connection,
+    parallel: Connection,
+    inclusive: Connection,
+    script: DocIcon,
+    endevent: Flag
   }
   return iconMap[type] || User
 }
@@ -258,16 +370,27 @@ const onDrop = (event: DragEvent) => {
 
   draggedNode.x = x
   draggedNode.y = y
-  draggedNode.approverType = 'select'
-  draggedNode.approverIds = []
-  draggedNode.roleIds = []
-  draggedNode.approverNames = []
-  draggedNode.roleNames = []
-  draggedNode.copyerIds = []
-  draggedNode.copyerNames = []
-  draggedNode.conditionExpression = ''
+  
+  // 初始化节点属性
+  if (draggedNode.type === 'approver') {
+    draggedNode.approverType = 'select'
+    draggedNode.approverIds = []
+    draggedNode.roleIds = []
+    draggedNode.approverNames = []
+    draggedNode.roleNames = []
+  } else if (draggedNode.type === 'copyer') {
+    draggedNode.copyerIds = []
+    draggedNode.copyerNames = []
+  } else if (draggedNode.type === 'condition') {
+    draggedNode.conditionExpression = ''
+  } else if (draggedNode.type === 'exclusive' || draggedNode.type === 'parallel' || draggedNode.type === 'inclusive') {
+    draggedNode.gatewayConditions = []
+  } else if (draggedNode.type === 'script') {
+    draggedNode.scriptContent = ''
+  }
 
   nodes.value.push(draggedNode)
+  saveToHistory()
   draggedNode = null
 }
 
@@ -309,7 +432,43 @@ const updateNode = () => {
     }).filter(Boolean)
   }
   
+  saveToHistory()
   ElMessage.success('节点已更新')
+}
+
+// 撤销/重做
+const saveToHistory = () => {
+  const state = JSON.stringify({
+    nodes: nodes.value,
+    startNode,
+    endNode
+  })
+  // 移除当前索引之后的历史
+  history.value = history.value.slice(0, historyIndex.value + 1)
+  history.value.push(state)
+  historyIndex.value = history.value.length - 1
+}
+
+const undo = () => {
+  if (historyIndex.value > 0) {
+    historyIndex.value--
+    const state = JSON.parse(history.value[historyIndex.value])
+    nodes.value = state.nodes
+    Object.assign(startNode, state.startNode)
+    Object.assign(endNode, state.endNode)
+    ElMessage.success('已撤销')
+  }
+}
+
+const redo = () => {
+  if (historyIndex.value < history.value.length - 1) {
+    historyIndex.value++
+    const state = JSON.parse(history.value[historyIndex.value])
+    nodes.value = state.nodes
+    Object.assign(startNode, state.startNode)
+    Object.assign(endNode, state.endNode)
+    ElMessage.success('已重做')
+  }
 }
 
 // 缩放控制
@@ -325,29 +484,132 @@ const resetZoom = () => {
   zoomLevel.value = 1
 }
 
+// 自动布局
+const autoLayout = () => {
+  const startX = 100
+  const startY = 100
+  const gapX = 250
+  const gapY = 150
+  
+  // 开始节点
+  startNode.x = startX
+  startNode.y = startY + 200
+  
+  // 按顺序排列节点
+  nodes.value.forEach((node, index) => {
+    node.x = startX + gapX * (Math.floor(index / 3) + 1)
+    node.y = startY + (index % 3) * gapY + 100
+  })
+  
+  // 结束节点
+  const lastX = Math.max(...nodes.value.map(n => n.x), startX) + gapX
+  endNode.x = lastX
+  endNode.y = startY + 200
+  
+  ElMessage.success('自动布局完成')
+}
+
+// 导出工作流
+const exportWorkflow = () => {
+  const workflowData = {
+    name: workflowName.value || '未命名工作流',
+    nodes: [startNode, ...nodes.value, endNode],
+    exportTime: new Date().toISOString()
+  }
+  
+  const blob = new Blob([JSON.stringify(workflowData, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${workflowName.value || 'workflow'}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+  
+  ElMessage.success('工作流已导出')
+}
+
+// 导入工作流
+const onImportFile = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target?.result as string)
+      if (data.name) workflowName.value = data.name
+      if (data.nodes && Array.isArray(data.nodes)) {
+        const importedNodes = data.nodes.filter((n: any) => !['start', 'end'].includes(n.type))
+        nodes.value = importedNodes
+        if (data.nodes.find((n: any) => n.type === 'start')) {
+          Object.assign(startNode, data.nodes.find((n: any) => n.type === 'start'))
+        }
+        if (data.nodes.find((n: any) => n.type === 'end')) {
+          Object.assign(endNode, data.nodes.find((n: any) => n.type === 'end'))
+        }
+      }
+      ElMessage.success('工作流已导入')
+    } catch (error) {
+      ElMessage.error('导入失败：文件格式错误')
+    }
+  }
+  reader.readAsText(file)
+  target.value = ''
+}
+
 // 保存工作流
 const saveWorkflow = () => {
   const workflowData = {
     name: workflowName.value || '未命名工作流',
-    nodes: [startNode, ...nodes.value, endNode]
+    nodes: [startNode, ...nodes.value, endNode],
+    saveTime: new Date().toISOString()
   }
   console.log('保存工作流:', workflowData)
+  saveToHistory()
   ElMessage.success('工作流已保存')
 }
 
 // 发布工作流
 const publishWorkflow = () => {
+  if (nodes.value.length === 0) {
+    ElMessage.warning('请至少添加一个节点')
+    return
+  }
+  
   const workflowData = {
     name: workflowName.value || '未命名工作流',
-    nodes: [startNode, ...nodes.value, endNode]
+    nodes: [startNode, ...nodes.value, endNode],
+    publishTime: new Date().toISOString()
   }
   console.log('发布工作流:', workflowData)
+  saveToHistory()
   ElMessage.success('工作流已发布')
 }
 
 // 返回列表
 const backToList = () => {
   router.push('/workflow/list')
+}
+
+// 获取网关名称
+const getGatewayName = (type: string) => {
+  const names: Record<string, string> = {
+    exclusive: '排他网关',
+    parallel: '并行网关',
+    inclusive: '包容网关'
+  }
+  return names[type] || '网关'
+}
+
+// 获取网关描述
+const getGatewayDescription = (type: string) => {
+  const descriptions: Record<string, string> = {
+    exclusive: '排他网关：只有一个输出路径会被执行（条件判断）',
+    parallel: '并行网关：所有输出路径会同时执行',
+    inclusive: '包容网关：满足条件的多个输出路径会执行'
+  }
+  return descriptions[type] || ''
 }
 </script>
 
@@ -392,10 +654,11 @@ const backToList = () => {
 }
 
 .component-panel {
-  width: 200px;
+  width: 220px;
   border-right: 1px solid #e4e7ed;
   padding: 16px;
   background: #fafafa;
+  overflow-y: auto;
   
   .panel-title {
     font-size: 14px;
@@ -404,30 +667,44 @@ const backToList = () => {
     margin-bottom: 12px;
   }
   
+  .component-section {
+    margin-bottom: 16px;
+    
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #909399;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+  }
+  
   .component-item {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 12px;
-    margin-bottom: 8px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
     background: #fff;
     border: 1px solid #e4e7ed;
     border-radius: 4px;
     cursor: grab;
     transition: all 0.3s;
+    font-size: 13px;
     
     &:hover {
       border-color: #409EFF;
       box-shadow: 0 2px 8px rgba(64,158,255,0.2);
+      transform: translateX(2px);
     }
     
     .el-icon {
-      font-size: 18px;
+      font-size: 16px;
       color: #409EFF;
+      flex-shrink: 0;
     }
     
     span {
-      font-size: 13px;
       color: #606266;
     }
   }
@@ -442,8 +719,21 @@ const backToList = () => {
   .canvas-toolbar {
     position: absolute;
     top: 16px;
-    right: 16px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #fff;
+    padding: 8px 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    
+    .toolbar-right {
+      display: flex;
+      gap: 8px;
+    }
   }
   
   .canvas {
