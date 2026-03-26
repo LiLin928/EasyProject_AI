@@ -97,6 +97,14 @@
               <el-icon><Grid /></el-icon>
               网格：{{ showGrid ? '开' : '关' }}
             </el-button>
+            <el-button @click="validateWorkflow">
+              <el-icon><CircleCheck /></el-icon>
+              验证
+            </el-button>
+            <el-button @click="clearCanvas">
+              <el-icon><Delete /></el-icon>
+              清空
+            </el-button>
             <el-button @click="exportWorkflow">
               <el-icon><Download /></el-icon>
               导出
@@ -164,9 +172,14 @@
               <div class="node-header">
                 <el-icon :component="getNodeIcon(node.type)" />
                 <span>{{ node.name }}</span>
-                <el-button class="delete-btn" type="text" @click.stop="deleteNode(node.id)">
-                  <el-icon><Close /></el-icon>
-                </el-button>
+                <div class="node-actions">
+                  <el-button class="action-btn" type="text" @click.stop="copyNode(node)" title="复制">
+                    <el-icon><CopyDocument /></el-icon>
+                  </el-button>
+                  <el-button class="delete-btn" type="text" @click.stop="deleteNode(node.id)" title="删除">
+                    <el-icon><Close /></el-icon>
+                  </el-button>
+                </div>
               </div>
               <div class="node-body">
                 <div v-if="node.type === 'approver'" class="node-info">
@@ -317,7 +330,10 @@ import {
   Document as DocIcon,
   Flag,
   Plus,
-  Grid
+  Grid,
+  Delete,
+  CopyDocument,
+  Scissor
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
@@ -340,6 +356,13 @@ const connections = ref<any[]>([])
 const isConnecting = ref(false)
 const connectionStart = ref<any>(null)
 const tempConnection = ref<any>(null)
+
+// 复制/粘贴
+const clipboard = ref<any>(null)
+const copiedNode = ref<any>(null)
+
+// 快捷键
+const shortcuts = ref<Map<string, Function>>(new Map())
 
 // 节点模板分类
 const basicNodes = [
@@ -733,6 +756,12 @@ const backToList = () => {
   router.push('/workflow/list')
 }
 
+// 生命周期
+onMounted(() => {
+  setupShortcuts()
+  saveToHistory() // 初始化历史记录
+})
+
 // 获取网关名称
 const getGatewayName = (type: string) => {
   const names: Record<string, string> = {
@@ -751,6 +780,163 @@ const getGatewayDescription = (type: string) => {
     inclusive: '包容网关：满足条件的多个输出路径会执行'
   }
   return descriptions[type] || ''
+}
+
+// 验证工作流
+const validateWorkflow = () => {
+  const errors: string[] = []
+  
+  // 检查是否有节点
+  if (nodes.value.length === 0) {
+    errors.push('工作流至少需要一个节点')
+  }
+  
+  // 检查节点名称
+  nodes.value.forEach(node => {
+    if (!node.name || node.name.trim() === '') {
+      errors.push(`节点 ${node.id} 的名称不能为空`)
+    }
+  })
+  
+  // 检查是否有孤立节点（没有连线）
+  if (connections.value.length === 0 && nodes.value.length > 0) {
+    errors.push('节点之间没有连接')
+  }
+  
+  // 检查是否有节点没有入度或出度
+  const nodeIds = [startNode.id, ...nodes.value.map(n => n.id), endNode.id]
+  const hasIncoming = new Set(nodeIds)
+  const hasOutgoing = new Set(nodeIds)
+  
+  connections.value.forEach(conn => {
+    hasOutgoing.add(conn.from.id)
+    hasIncoming.add(conn.to.id)
+  })
+  
+  // 开始节点应该有出度
+  if (!hasOutgoing.has(startNode.id) && nodes.value.length > 0) {
+    errors.push('开始节点没有连接到任何节点')
+  }
+  
+  // 结束节点应该有入度
+  if (!hasIncoming.has(endNode.id) && nodes.value.length > 0) {
+    errors.push('没有节点连接到结束节点')
+  }
+  
+  if (errors.length === 0) {
+    ElMessage.success('✓ 工作流验证通过')
+  } else {
+    ElMessage.error(errors.join('\n'))
+  }
+  
+  return errors.length === 0
+}
+
+// 清空画布
+const clearCanvas = async () => {
+  try {
+    await ElMessageBox.confirm('确定清空画布吗？此操作不可恢复！', '警告', {
+      type: 'warning'
+    })
+    nodes.value = []
+    connections.value = []
+    selectedNode.value = null
+    saveToHistory()
+    ElMessage.success('画布已清空')
+  } catch (error: any) {
+    if (error !== 'cancel') console.error('清空失败:', error)
+  }
+}
+
+// 复制节点
+const copyNode = (node: any) => {
+  copiedNode.value = JSON.parse(JSON.stringify(node))
+  ElMessage.success('节点已复制')
+}
+
+// 粘贴节点
+const pasteNode = () => {
+  if (!copiedNode.value) {
+    ElMessage.warning('没有可粘贴的节点')
+    return
+  }
+  
+  const newNode = JSON.parse(JSON.stringify(copiedNode.value))
+  newNode.id = `node_${Date.now()}`
+  newNode.x += 20
+  newNode.y += 20
+  newNode.name = `${newNode.name} (副本)`
+  
+  nodes.value.push(newNode)
+  saveToHistory()
+  ElMessage.success('节点已粘贴')
+}
+
+// 删除选中节点
+const deleteSelectedNode = () => {
+  if (!selectedNode.value) {
+    ElMessage.warning('请先选择节点')
+    return
+  }
+  deleteNode(selectedNode.value.id)
+  selectedNode.value = null
+}
+
+// 键盘快捷键
+const setupShortcuts = () => {
+  document.addEventListener('keydown', (event) => {
+    // Ctrl+C 复制
+    if (event.ctrlKey && event.key === 'c' && selectedNode.value) {
+      event.preventDefault()
+      copyNode(selectedNode.value)
+    }
+    
+    // Ctrl+V 粘贴
+    if (event.ctrlKey && event.key === 'v') {
+      event.preventDefault()
+      pasteNode()
+    }
+    
+    // Delete 删除
+    if (event.key === 'Delete' && selectedNode.value) {
+      event.preventDefault()
+      deleteSelectedNode()
+    }
+    
+    // Ctrl+Z 撤销
+    if (event.ctrlKey && event.key === 'z') {
+      event.preventDefault()
+      if (event.shiftKey) {
+        redo()
+      } else {
+        undo()
+      }
+    }
+    
+    // Ctrl+Y 重做
+    if (event.ctrlKey && event.key === 'y') {
+      event.preventDefault()
+      redo()
+    }
+    
+    // Ctrl+S 保存
+    if (event.ctrlKey && event.key === 's') {
+      event.preventDefault()
+      saveWorkflow()
+    }
+    
+    // 方向键移动节点
+    if (selectedNode.value && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+      event.preventDefault()
+      const step = event.shiftKey ? 10 : 1
+      switch (event.key) {
+        case 'ArrowUp': selectedNode.value.y -= step; break
+        case 'ArrowDown': selectedNode.value.y += step; break
+        case 'ArrowLeft': selectedNode.value.x -= step; break
+        case 'ArrowRight': selectedNode.value.x += step; break
+      }
+    }
+  })
 }
 </script>
 
@@ -962,13 +1148,28 @@ const getGatewayDescription = (type: string) => {
       font-size: 18px;
     }
     
-    .delete-btn {
+    .node-actions {
       margin-left: auto;
+      display: flex;
+      gap: 4px;
       opacity: 0;
       transition: opacity 0.3s;
+      
+      .action-btn, .delete-btn {
+        padding: 4px;
+        font-size: 14px;
+        
+        &:hover {
+          background: rgba(0,0,0,0.1);
+        }
+      }
+      
+      .delete-btn:hover {
+        color: #F56C6C;
+      }
     }
     
-    &:hover .delete-btn {
+    &:hover .node-actions {
       opacity: 1;
     }
   }
