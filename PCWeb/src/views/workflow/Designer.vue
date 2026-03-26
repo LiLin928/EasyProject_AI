@@ -25,6 +25,10 @@
         </el-button>
       </div>
       <div class="header-right">
+        <el-button @click="toggleSimulation">
+          <el-icon><VideoPlay /></el-icon>
+          {{ isSimulating ? '停止模拟' : '模拟运行' }}
+        </el-button>
         <el-button @click="saveWorkflow">
           <el-icon><Save /></el-icon>
           保存
@@ -267,8 +271,76 @@
         </div>
       </div>
 
-      <!-- 右侧属性面板 -->
-      <div class="property-panel" v-if="selectedNode">
+      <!-- 右侧面板：属性或模拟运行 -->
+      <div class="property-panel" v-if="isSimulating">
+        <div class="panel-title">
+          <el-icon><VideoPlay /></el-icon>
+          模拟运行
+        </div>
+        <el-divider />
+        
+        <div class="simulation-panel">
+          <div class="sim-status">
+            <div class="status-item">
+              <span class="label">状态:</span>
+              <el-tag :type="simulationStatus === 'running' ? 'success' : simulationStatus === 'paused' ? 'warning' : 'info'">
+                {{ simulationStatusText }}
+              </el-tag>
+            </div>
+            <div class="status-item">
+              <span class="label">当前节点:</span>
+              <span class="value">{{ currentNode?.name || '无' }}</span>
+            </div>
+            <div class="status-item">
+              <span class="label">执行进度:</span>
+              <span class="value">{{ executedNodes.length }} / {{ nodes.length + 2 }}</span>
+            </div>
+          </div>
+          
+          <el-progress
+            :percentage="simulationProgress"
+            :status="simulationStatus === 'completed' ? 'success' : undefined"
+          />
+          
+          <div class="sim-controls">
+            <el-button-group>
+              <el-button @click="startSimulation" :disabled="isSimulationRunning">
+                <el-icon><VideoPlay /></el-icon>
+                开始
+              </el-button>
+              <el-button @click="pauseSimulation" :disabled="!isSimulationRunning">
+                <el-icon><VideoPause /></el-icon>
+                暂停
+              </el-button>
+              <el-button @click="nextStep" :disabled="!isSimulationRunning || simulationStatus === 'completed'">
+                <el-icon><Right /></el-icon>
+                单步
+              </el-button>
+              <el-button @click="stopSimulation">
+                <el-icon><Close /></el-icon>
+                停止
+              </el-button>
+            </el-button-group>
+          </div>
+          
+          <div class="sim-log">
+            <div class="log-title">执行日志</div>
+            <div class="log-content" ref="logContentRef">
+              <div
+                v-for="(log, index) in simulationLogs"
+                :key="index"
+                class="log-item"
+                :class="'log-' + log.level"
+              >
+                <span class="log-time">{{ log.time }}</span>
+                <span class="log-message">{{ log.message }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="property-panel" v-else-if="selectedNode">
         <div class="panel-title">属性设置</div>
         <el-divider />
         
@@ -350,7 +422,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   Back as ArrowLeft,
@@ -382,7 +454,10 @@ import {
   Edit,
   FolderOpened,
   Search,
-  MapLocation
+  MapLocation,
+  VideoPlay,
+  VideoPause,
+  Right
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
@@ -419,6 +494,18 @@ const searchKeyword = ref('')
 // 迷你地图
 const showMinimap = ref(true)
 const minimapScale = ref(0.1)
+
+// 模拟运行相关
+const isSimulating = ref(false)
+const isSimulationRunning = ref(false)
+const simulationStatus = ref<'idle' | 'running' | 'paused' | 'completed'>('idle')
+const currentNode = ref<any>(null)
+const executedNodes = ref<any[]>([])
+const simulationLogs = ref<any[]>([])
+const simulationSpeed = ref(1000) // ms
+const simulationTimer = ref<any>(null)
+const logContentRef = ref<HTMLDivElement | null>(null)
+const executionQueue = ref<any[]>([])
 
 // 工作流模板
 const workflowTemplates = [
@@ -466,6 +553,23 @@ const otherNodes = [
   { type: 'script', name: '脚本任务', icon: DocIcon },
   { type: 'endevent', name: '结束事件', icon: Flag }
 ]
+
+// 模拟运行状态文本
+const simulationStatusText = computed(() => {
+  const texts = {
+    idle: '未开始',
+    running: '运行中',
+    paused: '已暂停',
+    completed: '已完成'
+  }
+  return texts[simulationStatus.value] || '未知'
+})
+
+// 模拟运行进度
+const simulationProgress = computed(() => {
+  const total = nodes.value.length + 2 // 包括开始和结束节点
+  return Math.round((executedNodes.value.length / total) * 100)
+})
 
 // 过滤节点
 const filteredNodes = computed(() => {
@@ -852,10 +956,167 @@ const backToList = () => {
   router.push('/workflow/list')
 }
 
+// 模拟运行相关函数
+const addLog = (message: string, level: 'info' | 'success' | 'warning' | 'error' = 'info') => {
+  const time = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+  simulationLogs.value.push({ time, message, level })
+  // 自动滚动到底部
+  setTimeout(() => {
+    if (logContentRef.value) {
+      logContentRef.value.scrollTop = logContentRef.value.scrollHeight
+    }
+  }, 50)
+}
+
+const highlightNode = (node: any, active: boolean) => {
+  const element = document.querySelector(`[data-node-id="${node.id}"]`) as HTMLElement
+  if (element) {
+    if (active) {
+      element.style.boxShadow = '0 0 0 3px #67C23A, 0 0 20px rgba(103,194,58,0.5)'
+      element.style.transform = 'scale(1.05)'
+    } else {
+      element.style.boxShadow = ''
+      element.style.transform = ''
+    }
+  }
+}
+
+const buildExecutionQueue = () => {
+  const queue: any[] = []
+  const visited = new Set<string>()
+  
+  // 从开始节点开始 BFS
+  const queue_temp: any[] = [startNode]
+  
+  while (queue_temp.length > 0) {
+    const node = queue_temp.shift()!
+    if (visited.has(node.id)) continue
+    visited.add(node.id)
+    
+    queue.push(node)
+    
+    // 找到所有从当前节点出发的连接
+    const connections_from = connections.value.filter(c => c.from.id === node.id)
+    connections_from.forEach(conn => {
+      if (!visited.has(conn.to.id)) {
+        queue_temp.push(conn.to)
+      }
+    })
+  }
+  
+  return queue
+}
+
+const startSimulation = () => {
+  if (nodes.value.length === 0) {
+    ElMessage.warning('请先添加节点')
+    return
+  }
+  
+  isSimulating.value = true
+  isSimulationRunning.value = true
+  simulationStatus.value = 'running'
+  executedNodes.value = []
+  simulationLogs.value = []
+  currentNode.value = null
+  
+  addLog('🚀 开始模拟运行工作流', 'info')
+  
+  // 构建执行队列
+  executionQueue.value = buildExecutionQueue()
+  
+  // 开始执行
+  runNextStep()
+}
+
+const runNextStep = () => {
+  if (executionQueue.value.length === 0) {
+    completeSimulation()
+    return
+  }
+  
+  const node = executionQueue.value.shift()!
+  currentNode.value = node
+  executedNodes.value.push(node)
+  
+  // 高亮当前节点
+  if (node.type !== 'start' && node.type !== 'end') {
+    highlightNode(node, true)
+  }
+  
+  addLog(`▶️ 执行节点：${node.name} (${node.type})`, 'success')
+  
+  // 模拟节点处理时间
+  simulationTimer.value = setTimeout(() => {
+    // 取消高亮
+    if (node.type !== 'start' && node.type !== 'end') {
+      highlightNode(node, false)
+    }
+    
+    if (isSimulationRunning.value) {
+      runNextStep()
+    }
+  }, simulationSpeed.value)
+}
+
+const pauseSimulation = () => {
+  isSimulationRunning.value = false
+  simulationStatus.value = 'paused'
+  if (simulationTimer.value) {
+    clearTimeout(simulationTimer.value)
+  }
+  addLog('⏸️ 模拟已暂停', 'warning')
+}
+
+const nextStep = () => {
+  if (executionQueue.value.length > 0) {
+    runNextStep()
+  }
+}
+
+const stopSimulation = () => {
+  isSimulating.value = false
+  isSimulationRunning.value = false
+  simulationStatus.value = 'idle'
+  if (simulationTimer.value) {
+    clearTimeout(simulationTimer.value)
+  }
+  
+  // 清除所有高亮
+  nodes.value.forEach(node => highlightNode(node, false))
+  currentNode.value = null
+  
+  addLog('⏹️ 模拟已停止', 'error')
+}
+
+const completeSimulation = () => {
+  isSimulationRunning.value = false
+  simulationStatus.value = 'completed'
+  currentNode.value = null
+  
+  addLog('✅ 工作流模拟运行完成', 'success')
+  addLog(`📊 共执行 ${executedNodes.value.length} 个节点`, 'info')
+}
+
+const toggleSimulation = () => {
+  if (isSimulating.value) {
+    stopSimulation()
+  } else {
+    startSimulation()
+  }
+}
+
 // 生命周期
 onMounted(() => {
   setupShortcuts()
   saveToHistory() // 初始化历史记录
+})
+
+// 组件卸载时清理
+onUnmounted(() => {
+  if (simulationTimer.value) {
+    clearTimeout(simulationTimer.value)
+  }
 })
 
 // 获取网关名称
@@ -1445,16 +1706,125 @@ const setupShortcuts = () => {
 }
 
 .property-panel {
-  width: 300px;
+  width: 320px;
   border-left: 1px solid #e4e7ed;
   padding: 16px;
   background: #fafafa;
+  overflow-y: auto;
   
   .panel-title {
     font-size: 14px;
     font-weight: 600;
     color: #303133;
     margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.simulation-panel {
+  .sim-status {
+    margin-bottom: 16px;
+    
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 13px;
+      
+      .label {
+        color: #909399;
+      }
+      
+      .value {
+        color: #303133;
+        font-weight: 500;
+      }
+    }
+  }
+  
+  .sim-controls {
+    margin: 16px 0;
+    
+    .el-button-group {
+      display: flex;
+      width: 100%;
+      
+      .el-button {
+        flex: 1;
+      }
+    }
+  }
+  
+  .sim-log {
+    margin-top: 16px;
+    border: 1px solid #e4e7ed;
+    border-radius: 4px;
+    background: #fff;
+    
+    .log-title {
+      padding: 8px 12px;
+      background: #f5f7fa;
+      border-bottom: 1px solid #e4e7ed;
+      font-size: 13px;
+      font-weight: 600;
+      color: #606266;
+    }
+    
+    .log-content {
+      height: 200px;
+      overflow-y: auto;
+      padding: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      
+      .log-item {
+        padding: 4px 8px;
+        margin-bottom: 4px;
+        border-radius: 2px;
+        display: flex;
+        gap: 8px;
+        
+        .log-time {
+          color: #909399;
+          flex-shrink: 0;
+        }
+        
+        .log-message {
+          color: #606266;
+        }
+        
+        &.log-info {
+          background: #f4f4f5;
+        }
+        
+        &.log-success {
+          background: #f0f9eb;
+          
+          .log-message {
+            color: #67C23A;
+          }
+        }
+        
+        &.log-warning {
+          background: #fdf6ec;
+          
+          .log-message {
+            color: #E6A23C;
+          }
+        }
+        
+        &.log-error {
+          background: #fef0f0;
+          
+          .log-message {
+            color: #F56C6C;
+          }
+        }
+      }
+    }
   }
 }
 </style>
