@@ -112,6 +112,14 @@
           </div>
         </div>
 
+        <!-- 当前菜单名称显示 -->
+        <div class="current-menu-title">
+          <el-breadcrumb separator="/">
+            <el-breadcrumb-item>首页</el-breadcrumb-item>
+            <el-breadcrumb-item>{{ currentMenuTitle }}</el-breadcrumb-item>
+          </el-breadcrumb>
+        </div>
+
         <!-- 内容区 -->
         <div class="main-content">
           <keep-alive :include="cachedViews">
@@ -156,6 +164,12 @@ const userStore = useUserStore()
 
 const activeMenu = computed(() => route.path)
 const isRouterAlive = ref(true)
+
+// 当前菜单标题
+const currentMenuTitle = computed(() => {
+  const tab = openTabs.value.find(t => t.path === route.path)
+  return tab?.title || '工作台'
+})
 
 // 标签页管理
 interface Tab {
@@ -517,5 +531,33 @@ const handleLogout = () => {
   flex: 1;
   background-color: #f0f2f5;
   overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.current-menu-title {
+  height: 40px;
+  background: #fff;
+  border-bottom: 1px solid #e4e7ed;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  
+  :deep(.el-breadcrumb) {
+    font-size: 14px;
+    
+    .el-breadcrumb__item {
+      color: #606266;
+    }
+    
+    .el-breadcrumb__inner {
+      font-weight: normal;
+    }
+    
+    .el-breadcrumb__item:last-child .el-breadcrumb__inner {
+      color: #409EFF;
+      font-weight: 600;
+    }
+  }
 }
 </style>
