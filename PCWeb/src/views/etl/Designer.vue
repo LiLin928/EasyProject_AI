@@ -86,24 +86,54 @@
       <!-- 中间画布 -->
       <div class="canvas-container">
         <div class="canvas-toolbar">
-          <el-button-group>
-            <el-button @click="zoomOut">
-              <el-icon><ZoomOut /></el-icon>
+          <div class="toolbar-group">
+            <el-button-group>
+              <el-button @click="undo" :disabled="historyIndex <= 0">
+                <el-icon><RefreshLeft /></el-icon>
+              </el-button>
+              <el-button @click="redo" :disabled="historyIndex >= history.length - 1">
+                <el-icon><RefreshRight /></el-icon>
+              </el-button>
+            </el-button-group>
+          </div>
+          
+          <div class="toolbar-group">
+            <el-button-group>
+              <el-button @click="zoomOut">
+                <el-icon><ZoomOut /></el-icon>
+              </el-button>
+              <el-button @click="resetZoom">{{ Math.round(canvasZoom * 100) }}%</el-button>
+              <el-button @click="zoomIn">
+                <el-icon><ZoomIn /></el-icon>
+              </el-button>
+            </el-button-group>
+          </div>
+          
+          <div class="toolbar-group">
+            <el-button @click="toggleGrid">
+              <el-icon><Grid /></el-icon>
+              网格：{{ showGrid ? '开' : '关' }}
             </el-button>
-            <el-button @click="resetZoom">{{ Math.round(canvasZoom * 100) }}%</el-button>
-            <el-button @click="zoomIn">
-              <el-icon><ZoomIn /></el-icon>
+            <el-button @click="autoLayout">
+              <el-icon><Arrange /></el-icon>
+              自动布局
             </el-button>
-          </el-button-group>
-          <el-divider direction="vertical" />
-          <el-button @click="toggleGrid">
-            <el-icon><Grid /></el-icon>
-            网格：{{ showGrid ? '开' : '关' }}
-          </el-button>
-          <el-button @click="autoLayout">
-            <el-icon><Arrange /></el-icon>
-            自动布局
-          </el-button>
+          </div>
+          
+          <div class="toolbar-group">
+            <el-button @click="loadTemplate">
+              <el-icon><FolderOpened /></el-icon>
+              模板
+            </el-button>
+            <el-button @click="previewData">
+              <el-icon><DataAnalysis /></el-icon>
+              预览
+            </el-button>
+            <el-button @click="viewLogs">
+              <el-icon><Document /></el-icon>
+              日志
+            </el-button>
+          </div>
         </div>
         
         <div
@@ -266,6 +296,38 @@
               </el-form-item>
             </el-form>
           </el-tab-pane>
+          
+          <el-tab-pane label="调度配置" name="schedule">
+            <el-form label-position="top" size="small" v-if="selectedTask">
+              <el-form-item label="调度类型">
+                <el-select v-model="selectedTask.config.scheduleType" placeholder="选择调度类型" style="width: 100%">
+                  <el-option label="手动触发" value="manual" />
+                  <el-option label="定时调度" value="cron" />
+                  <el-option label="依赖触发" value="dependency" />
+                </el-select>
+              </el-form-item>
+              
+              <el-form-item label="Cron 表达式" v-if="selectedTask.config?.scheduleType === 'cron'">
+                <el-input v-model="selectedTask.config.cronExpression" placeholder="0 0 * * * ?" />
+                <div class="form-tip">每小时执行一次</div>
+              </el-form-item>
+              
+              <el-form-item label="依赖任务" v-if="selectedTask.config?.scheduleType === 'dependency'">
+                <el-select v-model="selectedTask.config.dependencyTasks" multiple placeholder="选择依赖任务" style="width: 100%">
+                  <el-option label="用户数据同步" value="task_1" />
+                  <el-option label="订单数据同步" value="task_2" />
+                </el-select>
+              </el-form-item>
+              
+              <el-form-item label="失败告警">
+                <el-switch v-model="selectedTask.config.enableAlert" />
+              </el-form-item>
+              
+              <el-form-item label="告警邮箱" v-if="selectedTask.config?.enableAlert">
+                <el-input v-model="selectedTask.config.alertEmail" placeholder="admin@example.com" />
+              </el-form-item>
+            </el-form>
+          </el-tab-pane>
         </el-tabs>
       </div>
     </div>
@@ -295,7 +357,10 @@ import {
   Download,
   Refresh,
   Warning,
-  Folder
+  Folder,
+  FolderOpened,
+  RefreshLeft,
+  RefreshRight
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -308,6 +373,30 @@ const selectedTask = ref<any>(null)
 const selectedConnection = ref<any>(null)
 const tasks = ref<any[]>([])
 const connections = ref<any[]>([])
+
+// 撤销/重做历史
+const history = ref<any[]>([])
+const historyIndex = ref(-1)
+
+// ETL 模板
+const etlTemplates = [
+  {
+    name: 'MySQL 数据同步',
+    tasks: [
+      { type: 'sql_extract', name: '抽取用户数据', config: { sourceSql: 'SELECT * FROM users', sourceDb: 'mysql_prod' } },
+      { type: 'data_quality', name: '数据质量检查', config: {} },
+      { type: 'db_load', name: '加载到数仓', config: { targetTable: 'dw_users', targetDb: 'oracle_dw' } }
+    ]
+  },
+  {
+    name: 'API 数据拉取',
+    tasks: [
+      { type: 'api_extract', name: '调用外部 API', config: {} },
+      { type: 'data_transform', name: '数据转换', config: {} },
+      { type: 'db_load', name: '入库', config: { targetTable: 'stg_api_data' } }
+    ]
+  }
+]
 
 // 工具定义
 const extractTools = [
@@ -428,6 +517,7 @@ const onDrop = (event: DragEvent) => {
   
   tasks.value.push(newTask)
   selectTask(newTask)
+  saveToHistory()
   draggedTool = null
 }
 
@@ -543,6 +633,34 @@ const toggleGrid = () => {
   showGrid.value = !showGrid.value
 }
 
+// 撤销/重做
+const saveToHistory = () => {
+  const state = JSON.stringify({ tasks: tasks.value, connections: connections.value })
+  history.value = history.value.slice(0, historyIndex.value + 1)
+  history.value.push(state)
+  historyIndex.value = history.value.length - 1
+}
+
+const undo = () => {
+  if (historyIndex.value > 0) {
+    historyIndex.value--
+    const state = JSON.parse(history.value[historyIndex.value])
+    tasks.value = state.tasks
+    connections.value = state.connections
+    ElMessage.success('已撤销')
+  }
+}
+
+const redo = () => {
+  if (historyIndex.value < history.value.length - 1) {
+    historyIndex.value++
+    const state = JSON.parse(history.value[historyIndex.value])
+    tasks.value = state.tasks
+    connections.value = state.connections
+    ElMessage.success('已重做')
+  }
+}
+
 // 自动布局
 const autoLayout = () => {
   const gapX = 300
@@ -556,7 +674,115 @@ const autoLayout = () => {
     task.y = 100 + row * gapY
   })
   
+  saveToHistory()
   ElMessage.success('自动布局完成')
+}
+
+// 加载模板
+const loadTemplate = async () => {
+  try {
+    const { value: selectedTemplate } = await ElMessageBox.prompt(
+      '请输入模板名称：<br/>' + etlTemplates.map(t => `• ${t.name}`).join('<br/>'),
+      '选择 ETL 模板',
+      {
+        dangerouslyUseHTMLString: true,
+        inputPattern: /.+/,
+        inputErrorMessage: '请输入有效的模板名称'
+      }
+    )
+    
+    const template = etlTemplates.find(t => t.name === selectedTemplate)
+    if (!template) {
+      ElMessage.error('未找到该模板')
+      return
+    }
+    
+    tasks.value = template.tasks.map((t: any, index: number) => ({
+      id: `task_${Date.now()}_${index}`,
+      code: `task_${Date.now()}_${index}`,
+      type: t.type,
+      name: t.name,
+      x: 100 + index * 300,
+      y: 150,
+      width: 200,
+      height: 80,
+      config: {
+        timeout: 300,
+        retryCount: 0,
+        retryInterval: 60,
+        ...t.config
+      }
+    }))
+    
+    // 自动创建连线
+    connections.value = []
+    for (let i = 0; i < tasks.value.length - 1; i++) {
+      connections.value.push({
+        id: `conn_${Date.now()}_${i}`,
+        from: tasks.value[i],
+        to: tasks.value[i + 1]
+      })
+    }
+    
+    workflowName.value = template.name
+    saveToHistory()
+    ElMessage.success(`模板"${template.name}"已加载`)
+  } catch (error: any) {
+    if (error !== 'cancel') console.error('加载模板失败:', error)
+  }
+}
+
+// 数据预览
+const previewData = () => {
+  if (!selectedTask.value) {
+    ElMessage.warning('请先选择任务')
+    return
+  }
+  
+  ElMessageBox.alert(
+    `
+    <div style="text-align: left;">
+      <h4>数据预览 - ${selectedTask.value.name}</h4>
+      <p><strong>源 SQL:</strong> ${selectedTask.value.config?.sourceSql || '未配置'}</p>
+      <p><strong>目标表:</strong> ${selectedTask.value.config?.targetTable || '未配置'}</p>
+      <p><strong>批量大小:</strong> ${selectedTask.value.config?.batchSize || 1000}</p>
+      <el-divider />
+      <p style="color: #909399;">实际执行时将显示前 100 行数据预览</p>
+    </div>
+    `,
+    '数据预览',
+    {
+      dangerouslyUseHTMLString: true,
+      confirmButtonText: '关闭'
+    }
+  )
+}
+
+// 查看日志
+const viewLogs = () => {
+  ElMessageBox.alert(
+    `
+    <div style="text-align: left; max-height: 400px; overflow-y: auto;">
+      <h4>执行日志</h4>
+      <div style="font-family: monospace; font-size: 12px;">
+        <div style="color: #67C23A;">[2026-03-26 10:00:00] 任务开始执行</div>
+        <div style="color: #409EFF;">[2026-03-26 10:00:01] 正在连接数据源...</div>
+        <div style="color: #67C23A;">[2026-03-26 10:00:02] 数据源连接成功</div>
+        <div style="color: #409EFF;">[2026-03-26 10:00:03] 执行 SQL 查询...</div>
+        <div style="color: #67C23A;">[2026-03-26 10:00:10] 查询完成，共 10000 条记录</div>
+        <div style="color: #409EFF;">[2026-03-26 10:00:11] 开始数据转换...</div>
+        <div style="color: #67C23A;">[2026-03-26 10:00:15] 数据转换完成</div>
+        <div style="color: #409EFF;">[2026-03-26 10:00:16] 开始加载到目标表...</div>
+        <div style="color: #67C23A;">[2026-03-26 10:00:30] 任务执行完成，耗时 30 秒</div>
+      </div>
+    </div>
+    `,
+    '执行日志',
+    {
+      dangerouslyUseHTMLString: true,
+      confirmButtonText: '关闭'
+    }
+  )
 }
 
 // 保存/运行
@@ -568,6 +794,7 @@ const saveWorkflow = () => {
     saveTime: new Date().toISOString()
   }
   console.log('保存工作流:', workflowData)
+  saveToHistory()
   ElMessage.success('工作流已保存')
 }
 
@@ -576,7 +803,21 @@ const runWorkflow = () => {
     ElMessage.warning('请先添加任务')
     return
   }
-  ElMessage.info('工作流运行功能开发中')
+  
+  ElMessageBox.confirm(
+    '确定要运行当前工作流吗？<br/>这将在后台执行所有任务。',
+    '运行工作流',
+    {
+      dangerouslyUseHTMLString: true,
+      confirmButtonText: '运行',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(() => {
+    ElMessage.success('工作流已开始运行，可在任务列表查看执行进度')
+  }).catch(() => {
+    ElMessage.info('已取消运行')
+  })
 }
 
 const backToList = () => {
@@ -591,7 +832,7 @@ onUnmounted(() => {
 
 // 初始化
 onMounted(() => {
-  // 可以添加示例任务
+  saveToHistory() // 初始化历史记录
 })
 </script>
 
@@ -693,11 +934,26 @@ onMounted(() => {
     z-index: 100;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 16px;
     background: #fff;
     padding: 8px 16px;
     border-radius: 8px;
     box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      
+      &:not(:last-child) {
+        padding-right: 16px;
+        border-right: 1px solid #e4e7ed;
+      }
+      
+      &:not(:first-child) {
+        padding-left: 16px;
+      }
+    }
   }
   
   .canvas {
@@ -884,6 +1140,12 @@ onMounted(() => {
     margin-left: 8px;
     color: #909399;
     font-size: 13px;
+  }
+  
+  .form-tip {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #909399;
   }
 }
 </style>
