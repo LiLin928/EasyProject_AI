@@ -60,8 +60,10 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
+const router = useRouter()
 const loading = ref(false)
 const tableData = ref<any[]>([])
 const total = ref(0)
@@ -104,15 +106,15 @@ const handleReset = () => {
 }
 
 const handleCreate = () => {
-  ElMessage.info('新建工作流功能待实现')
+  router.push('/workflow/designer')
 }
 
 const handleView = (row: any) => {
-  ElMessage.info(`查看工作流：${row.name}`)
+  router.push(`/workflow/designer/${row.id}`)
 }
 
 const handleDesign = (row: any) => {
-  ElMessage.info('工作流设计器待实现')
+  router.push(`/workflow/designer/${row.id}`)
 }
 
 const handlePublish = async (row: any) => {

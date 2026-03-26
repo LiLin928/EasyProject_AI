@@ -2,7 +2,7 @@
   <div class="layout-container">
     <el-container>
       <!-- 侧边栏 -->
-      <el-aside width="200px">
+      <el-aside width="220px">
         <div class="logo">EasyProject</div>
         <el-menu
           :default-active="activeMenu"
@@ -10,20 +10,36 @@
           text-color="#bfcbd9"
           active-text-color="#409EFF"
           router
+          :unique-opened="true"
         >
+          <!-- 工作台 -->
           <el-menu-item index="/desktop">
             <el-icon><Home /></el-icon>
             <span>工作台</span>
           </el-menu-item>
           
-          <el-sub-menu index="basic">
-            <template #title>
-              <el-icon><Setting /></el-icon>
-              <span>基础管理</span>
-            </template>
-            <el-menu-item index="/basic/user">用户管理</el-menu-item>
-            <el-menu-item index="/basic/role">角色管理</el-menu-item>
-          </el-sub-menu>
+          <!-- 动态渲染所有菜单 -->
+          <template v-for="route in menuRoutes" :key="route.path">
+            <el-sub-menu v-if="route.children && route.children.length > 0" :index="route.path">
+              <template #title>
+                <el-icon :component="getIcon(route.meta?.icon)" />
+                <span>{{ route.meta?.title }}</span>
+              </template>
+              <el-menu-item
+                v-for="child in route.children"
+                :key="child.path"
+                :index="`${route.path}/${child.path}`"
+              >
+                <el-icon v-if="child.meta?.icon" :component="getIcon(child.meta.icon)" />
+                <span>{{ child.meta?.title }}</span>
+              </el-menu-item>
+            </el-sub-menu>
+            
+            <el-menu-item v-else :index="route.path">
+              <el-icon :component="getIcon(route.meta?.icon)" />
+              <span>{{ route.meta?.title }}</span>
+            </el-menu-item>
+          </template>
         </el-menu>
       </el-aside>
 
@@ -63,14 +79,63 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, type RouteRecordRaw } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import {
+  House as Home,
+  Setting,
+  User,
+  Lock,
+  Menu as MenuIcon,
+  ShoppingCart,
+  Document,
+  Connection,
+  List,
+  DataLine,
+  Tickets as Task,
+  DataAnalysis,
+  Monitor,
+  Grid,
+  SwitchButton,
+  ArrowDown
+} from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
 const activeMenu = computed(() => route.path)
+
+// 获取所有菜单路由（排除 Layout 和 Login）
+const menuRoutes = computed(() => {
+  return router.options.routes.filter((r: RouteRecordRaw) => {
+    return r.name !== 'Layout' && r.name !== 'Login' && r.path !== '/login'
+  })
+})
+
+// 图标映射
+const iconMap: Record<string, any> = {
+  Home,
+  Setting,
+  User,
+  Lock,
+  Menu: MenuIcon,
+  ShoppingCart,
+  Document,
+  Connection,
+  List,
+  DataLine,
+  Task,
+  DataAnalysis,
+  Monitor,
+  Grid,
+  SwitchButton,
+  ArrowDown
+}
+
+const getIcon = (iconName?: string) => {
+  return iconName ? (iconMap[iconName] || Setting) : Setting
+}
 
 const handleLogout = () => {
   userStore.logout()
@@ -99,6 +164,10 @@ const handleLogout = () => {
     font-weight: bold;
     color: #fff;
     background-color: #2b3a4b;
+  }
+  
+  .el-menu {
+    border-right: none;
   }
 }
 

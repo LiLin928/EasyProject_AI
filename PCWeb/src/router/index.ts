@@ -96,6 +96,18 @@ const routes: RouteRecordRaw[] = [
         name: 'WorkflowList',
         component: () => import('@/views/workflow/List.vue'),
         meta: { title: '工作流管理', icon: 'List' }
+      },
+      {
+        path: 'designer',
+        name: 'WorkflowDesigner',
+        component: () => import('@/views/workflow/Designer.vue'),
+        meta: { title: '工作流设计器', icon: 'Connection' }
+      },
+      {
+        path: 'designer/:id',
+        name: 'WorkflowDesignerEdit',
+        component: () => import('@/views/workflow/Designer.vue'),
+        meta: { title: '编辑工作流', icon: 'Connection' }
       }
     ]
   },
