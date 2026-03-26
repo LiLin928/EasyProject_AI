@@ -150,6 +150,18 @@ const routes: RouteRecordRaw[] = [
         name: 'ScreenProject',
         component: () => import('@/views/screen/Project.vue'),
         meta: { title: '大屏项目', icon: 'Grid' }
+      },
+      {
+        path: 'designer',
+        name: 'ScreenDesigner',
+        component: () => import('@/views/screen/Designer.vue'),
+        meta: { title: '大屏设计器', icon: 'Monitor' }
+      },
+      {
+        path: 'designer/:id',
+        name: 'ScreenDesignerEdit',
+        component: () => import('@/views/screen/Designer.vue'),
+        meta: { title: '编辑大屏', icon: 'Monitor' }
       }
     ]
   }
