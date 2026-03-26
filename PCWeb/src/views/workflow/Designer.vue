@@ -93,6 +93,10 @@
             </el-button>
           </el-button-group>
           <div class="toolbar-right">
+            <el-button @click="toggleGrid">
+              <el-icon><Grid /></el-icon>
+              网格：{{ showGrid ? '开' : '关' }}
+            </el-button>
             <el-button @click="exportWorkflow">
               <el-icon><Download /></el-icon>
               导出
@@ -110,13 +114,39 @@
             />
           </div>
         </div>
-        <div class="canvas" ref="canvasRef" @dragover="onDragOver" @drop="onDrop">
+        <div class="canvas" ref="canvasRef" @dragover="onDragOver" @drop="onDrop" @click="onCanvasClick" @mouseup="onMouseUp">
+          <!-- 网格背景 -->
+          <div class="canvas-grid" v-if="showGrid" :style="{ transform: `scale(${zoomLevel})` }"></div>
+          
+          <!-- SVG 连线层 -->
+          <svg class="canvas-connections" :style="{ transform: `scale(${zoomLevel})` }">
+            <defs>
+              <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#409EFF" />
+              </marker>
+            </defs>
+            <path
+              v-for="conn in connections"
+              :key="conn.id"
+              :d="getConnectionPath(conn.from, conn.to)"
+              stroke="#409EFF"
+              stroke-width="2"
+              fill="none"
+              marker-end="url(#arrowhead)"
+              class="connection-path"
+              @click="selectConnection(conn)"
+            />
+          </svg>
+          
           <div class="canvas-content" :style="{ transform: `scale(${zoomLevel})` }">
             <!-- 开始节点 -->
             <div class="node start-node" :style="getNodePosition(startNode)">
               <div class="node-header">
                 <el-icon><Play /></el-icon>
                 <span>开始</span>
+              </div>
+              <div class="node-connector" @mousedown="startConnection(startNode)">
+                <el-icon><Plus /></el-icon>
               </div>
             </div>
 
@@ -127,7 +157,9 @@
               class="node"
               :class="['node-' + node.type, { selected: selectedNode?.id === node.id }]"
               :style="getNodePosition(node)"
+              :data-node-id="node.id"
               @click="selectNode(node)"
+              @mouseup.stop="onNodeMouseUp(node)"
             >
               <div class="node-header">
                 <el-icon :component="getNodeIcon(node.type)" />
@@ -160,6 +192,9 @@
                 <div v-else-if="node.type === 'script'" class="node-info">
                   <span>脚本：{{ node.scriptContent ? '已配置' : '未设置' }}</span>
                 </div>
+              </div>
+              <div class="node-connector" @mousedown.stop="startConnection(node)">
+                <el-icon><Plus /></el-icon>
               </div>
             </div>
 
@@ -280,7 +315,9 @@ import {
   Grid as Arrange,
   Timer,
   Document as DocIcon,
-  Flag
+  Flag,
+  Plus,
+  Grid
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
@@ -292,10 +329,17 @@ const zoomLevel = ref(1)
 const selectedNode = ref<any>(null)
 const workflowName = ref('')
 const importTrigger = ref<HTMLInputElement | null>(null)
+const showGrid = ref(true)
 
 // 撤销/重做历史
 const history = ref<any[]>([])
 const historyIndex = ref(-1)
+
+// 连线相关
+const connections = ref<any[]>([])
+const isConnecting = ref(false)
+const connectionStart = ref<any>(null)
+const tempConnection = ref<any>(null)
 
 // 节点模板分类
 const basicNodes = [
@@ -402,10 +446,107 @@ const selectNode = (node: any) => {
 // 删除节点
 const deleteNode = (nodeId: string) => {
   nodes.value = nodes.value.filter(n => n.id !== nodeId)
+  // 同时删除相关连线
+  connections.value = connections.value.filter(c => c.from.id !== nodeId && c.to.id !== nodeId)
   if (selectedNode.value?.id === nodeId) {
     selectedNode.value = null
   }
+  saveToHistory()
   ElMessage.success('节点已删除')
+}
+
+// 开始连线
+const startConnection = (node: any) => {
+  isConnecting.value = true
+  connectionStart.value = node
+}
+
+// 结束连线
+const endConnection = (targetNode: any) => {
+  if (!isConnecting.value || !connectionStart.value) return
+  
+  // 不能自己连自己
+  if (connectionStart.value.id === targetNode.id) {
+    isConnecting.value = false
+    connectionStart.value = null
+    return
+  }
+  
+  // 检查是否已存在
+  const exists = connections.value.some(c => 
+    c.from.id === connectionStart.value?.id && c.to.id === targetNode.id
+  )
+  
+  if (!exists) {
+    connections.value.push({
+      id: `conn_${Date.now()}`,
+      from: connectionStart.value,
+      to: targetNode
+    })
+    saveToHistory()
+    ElMessage.success('连接已创建')
+  }
+  
+  isConnecting.value = false
+  connectionStart.value = null
+}
+
+// 画布点击事件
+const onCanvasClick = (event: MouseEvent) => {
+  const target = event.target as HTMLElement
+  // 如果点击的是画布背景（不是节点），结束连线
+  if (target.classList.contains('canvas') || target.classList.contains('canvas-content') || 
+      target.classList.contains('canvas-grid') || target.classList.contains('canvas-connections')) {
+    if (isConnecting.value) {
+      isConnecting.value = false
+      connectionStart.value = null
+    }
+  }
+}
+
+// 节点鼠标松开事件
+const onNodeMouseUp = (node: any) => {
+  if (isConnecting.value) {
+    endConnection(node)
+  }
+}
+
+// 鼠标松开事件
+const onMouseUp = (event: MouseEvent) => {
+  if (isConnecting.value) {
+    isConnecting.value = false
+    connectionStart.value = null
+  }
+}
+
+// 获取连线 SVG 路径
+const getConnectionPath = (from: any, to: any) => {
+  const startX = from.x + 200 // 节点宽度
+  const startY = from.y + 40  // 节点高度的一半
+  const endX = to.x
+  const endY = to.y + 40
+  
+  // 贝塞尔曲线
+  const controlPoint1X = startX + (endX - startX) / 2
+  const controlPoint1Y = startY
+  const controlPoint2X = endX - (endX - startX) / 2
+  const controlPoint2Y = endY
+  
+  return `M ${startX} ${startY} C ${controlPoint1X} ${controlPoint1Y}, ${controlPoint2X} ${controlPoint2Y}, ${endX} ${endY}`
+}
+
+// 选择连线
+const selectConnection = (conn: any) => {
+  if (confirm('确定删除此连接吗？')) {
+    connections.value = connections.value.filter(c => c.id !== conn.id)
+    saveToHistory()
+    ElMessage.success('连接已删除')
+  }
+}
+
+// 切换网格
+const toggleGrid = () => {
+  showGrid.value = !showGrid.value
 }
 
 // 更新节点
@@ -721,7 +862,7 @@ const getGatewayDescription = (type: string) => {
     top: 16px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 10;
+    z-index: 100;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -740,6 +881,41 @@ const getGatewayDescription = (type: string) => {
     width: 100%;
     height: 100%;
     overflow: auto;
+    position: relative;
+    
+    .canvas-grid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 2000px;
+      height: 2000px;
+      background-image: 
+        linear-gradient(rgba(64,158,255,0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(64,158,255,0.1) 1px, transparent 1px);
+      background-size: 20px 20px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    .canvas-connections {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 2000px;
+      height: 2000px;
+      pointer-events: none;
+      z-index: 1;
+      
+      .connection-path {
+        pointer-events: stroke;
+        cursor: pointer;
+        
+        &:hover {
+          stroke: #67C23A;
+          stroke-width: 3;
+        }
+      }
+    }
     
     .canvas-content {
       position: relative;
@@ -747,6 +923,7 @@ const getGatewayDescription = (type: string) => {
       min-height: 600px;
       transform-origin: top left;
       transition: transform 0.3s;
+      z-index: 2;
     }
   }
 }
@@ -794,6 +971,38 @@ const getGatewayDescription = (type: string) => {
     &:hover .delete-btn {
       opacity: 1;
     }
+  }
+  
+  .node-connector {
+    position: absolute;
+    right: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #409EFF;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: crosshair;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 10;
+    
+    .el-icon {
+      font-size: 14px;
+    }
+    
+    &:hover {
+      background: #67C23A;
+      transform: translateY(-50%) scale(1.2);
+    }
+  }
+  
+  &:hover .node-connector {
+    opacity: 1;
   }
   
   .node-body {
