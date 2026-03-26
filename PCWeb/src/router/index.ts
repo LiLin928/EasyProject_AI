@@ -171,37 +171,3 @@ router.beforeEach((to, from, next) => {
 })
 
 export default router
-��项目', icon: 'Grid' }
-      }
-    ]
-  }
-]
-
-const router = createRouter({
-  history: createWebHistory(),
-  routes
-})
-
-// 路由守卫
-router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
-  
-  // 设置页面标题
-  document.title = to.meta.title ? `${to.meta.title} - EasyProject` : 'EasyProject'
-  
-  // 访问登录页，直接放行
-  if (to.path === '/login') {
-    next()
-    return
-  }
-  
-  // 未登录，跳转到登录页
-  if (!token) {
-    next('/login')
-    return
-  }
-  
-  next()
-})
-
-export default router
