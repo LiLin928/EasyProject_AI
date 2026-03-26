@@ -34,8 +34,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 
+const router = useRouter()
 const loading = ref(false)
 const tableData = ref<any[]>([])
 
@@ -45,9 +47,9 @@ onMounted(() => {
   ]
 })
 
-const handleCreate = () => ElMessage.info('新建报表功能待实现')
+const handleCreate = () => router.push('/report/designer')
 const handleView = (row: any) => ElMessage.info(`查看报表：${row.reportName}`)
-const handleDesign = (row: any) => ElMessage.info('报表设计器待实现')
+const handleDesign = (row: any) => router.push(`/report/designer/${row.id}`)
 const handleDelete = (row: any) => ElMessage.info(`删除报表：${row.reportName}`)
 </script>
 

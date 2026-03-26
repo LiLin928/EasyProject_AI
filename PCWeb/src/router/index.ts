@@ -148,6 +148,18 @@ const routes: RouteRecordRaw[] = [
         name: 'ReportList',
         component: () => import('@/views/report/List.vue'),
         meta: { title: '报表列表', icon: 'Document' }
+      },
+      {
+        path: 'designer',
+        name: 'ReportDesigner',
+        component: () => import('@/views/report/Designer.vue'),
+        meta: { title: '报表设计器', icon: 'DataAnalysis' }
+      },
+      {
+        path: 'designer/:id',
+        name: 'ReportDesignerEdit',
+        component: () => import('@/views/report/Designer.vue'),
+        meta: { title: '编辑报表', icon: 'DataAnalysis' }
       }
     ]
   },
